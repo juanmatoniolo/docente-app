@@ -1,0 +1,95 @@
+/* Reset básico */
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Tipografía más cómoda en móviles */
+body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Navbar: que no se vea tan alto en móviles */
+.navbar {
+    padding: 0.5rem 1rem;
+}
+
+/* Botones grandes y fáciles de tocar en pantallas pequeñas */
+.btn {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border-radius: 0.75rem;
+}
+
+/* Tarjetas (Features, Stats, etc.) */
+.card {
+    border-radius: 0.75rem;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+/* Ajustes de listas (FAQ, Hoy, etc.) */
+ul {
+    padding-left: 1.2rem;
+}
+
+/* Mejoras en FAQ (accordion) */
+.accordion-button {
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+/* --------- MEDIA QUERIES --------- */
+
+/* Teléfonos pequeños (max 576px) */
+@media (max-width: 576px) {
+
+    h1,
+    .display-5 {
+        font-size: 1.8rem;
+        line-height: 1.2;
+    }
+
+    h2,
+    .h3 {
+        font-size: 1.4rem;
+    }
+
+    p,
+    .lead,
+    .small {
+        font-size: 0.95rem;
+    }
+
+    /* Botones en stack (uno debajo del otro) */
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Navbar: que el botón “Entrar” no quede apretado */
+    .navbar .btn {
+        width: auto;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    /* Cards ocupan todo el ancho */
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Tablets (max 768px) */
+@media (max-width: 768px) {
+    .hero-text {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+}
