@@ -1,11 +1,16 @@
 "use client";
 import React from 'react'
+import { Suspense } from "react";
+
 import AttendanceManager from '../../components/AttendanceManager'
 
 const page = () => {
   return (
     <>
-       <AttendanceManager />
+      <Suspense fallback={<div>Cargando asistencia...</div>}>
+
+        <AttendanceManager />
+      </Suspense>
     </>
   )
 }

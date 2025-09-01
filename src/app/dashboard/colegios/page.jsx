@@ -1,3 +1,6 @@
+
+"use client";
+
 import React from 'react'
 import SchoolsManager from '../../components/SchoolsManager'
 import CoursesManager from '../../components/CoursesManager'

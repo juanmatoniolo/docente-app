@@ -4,17 +4,22 @@ import { useEffect, useMemo, useState } from 'react';
 import SelectSchoolCourse from './SelectSchoolCourse';
 import {
   subscribeStudents,
-  getAttendanceByCourse,
   getObservations,
-  computeCourseAttendanceSummary,
   getTerm,
   saveTermGrades,
   saveTermPeriod,
   closeTerm,
+  subscribeSchools,
 } from '../lib/rtdb';
 import { useAuth } from '../context/AuthContext';
 
-// Utils locales
+function clampGrade(v) {
+  if (v === '' || v === null || v === undefined) return '';
+  const n = Math.floor(Number(String(v).replace(/[^0-9]/g, '')));
+  if (Number.isNaN(n)) return '';
+  return Math.max(1, Math.min(10, n));
+}
+
 function within(date, from, to) {
   if (!date) return false;
   if (from && date < from) return false;
@@ -27,45 +32,46 @@ export default function TermClosure() {
   const uid = user?.uid;
 
   const [sel, setSel] = useState({ schoolId: '', courseId: '' });
-  const [term, setTerm] = useState('T1'); // T1/T2/T3 (o texto libre)
+  const [term, setTerm] = useState('T1');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [notes, setNotes] = useState('');
 
   const [students, setStudents] = useState({});
-  const [attendanceAll, setAttendanceAll] = useState({});
-  const [observationsAll, setObservationsAll] = useState({});
+  const [observationsAll, setObservationsAll] = useState({}); // {date: {sid: text}}
+  const [grades, setGrades] = useState({}); // {sid: 1..10}
   const [loading, setLoading] = useState(false);
 
-  // Notas (map por alumno)
-  const [grades, setGrades] = useState({}); // { studentId: '9', ... }
-  const [existingTerm, setExistingTerm] = useState(null);
+  // Modal cierre
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const openConfirm = () => setShowConfirm(true);
+  const closeConfirm = () => { if (!closing) setShowConfirm(false); };
 
-  // Cargar alumnos
+  // cargar alumnos
   useEffect(() => {
     if (!uid || !sel.courseId) { setStudents({}); return; }
-    return subscribeStudents(uid, sel.courseId, setStudents);
+    const off = subscribeStudents(uid, sel.courseId, setStudents);
+    return () => off && off();
   }, [uid, sel.courseId]);
 
-  // Cargar datos del curso (asistencia + observaciones) y el término si existe
+  // cargar observaciones + término existente (para precargar período/notas)
   useEffect(() => {
     if (!uid || !sel.courseId) {
-      setAttendanceAll({});
       setObservationsAll({});
-      setExistingTerm(null);
+      setGrades({});
+      setFromDate('');
+      setToDate('');
+      setNotes('');
       return;
     }
     (async () => {
       setLoading(true);
-      const [att, obs, t] = await Promise.all([
-        getAttendanceByCourse(uid, sel.courseId),
+      const [obs, t] = await Promise.all([
         getObservations(uid, sel.courseId),
         getTerm(uid, sel.courseId, term),
       ]);
-      setAttendanceAll(att || {});
       setObservationsAll(obs || {});
-      setExistingTerm(t || {});
-      // Prefill de período y notas si existen
       if (t?.period?.from) setFromDate(t.period.from);
       if (t?.period?.to) setToDate(t.period.to);
       if (t?.grades) setGrades(t.grades);
@@ -74,275 +80,281 @@ export default function TermClosure() {
     })();
   }, [uid, sel.courseId, term]);
 
-  // Fechas del rango
-  const dateList = useMemo(() => {
-    return Object.keys(attendanceAll || {})
-      .filter(d => within(d, fromDate, toDate))
-      .sort();
-  }, [attendanceAll, fromDate, toDate]);
+  const orderedStudents = useMemo(() => {
+    return Object.entries(students)
+      .map(([id, s]) => ({ id, ...s }))
+      .sort((a, b) => {
+        const A = `${a.lastName || ''} ${a.firstName || ''}`.toLowerCase();
+        const B = `${b.lastName || ''} ${b.firstName || ''}`.toLowerCase();
+        return A.localeCompare(B);
+      });
+  }, [students]);
 
-  // Resumen dentro del rango
-  const rangeAttendance = useMemo(() => {
-    // reduce attendanceAll a solo fechas del rango
-    const filtered = {};
-    dateList.forEach(d => { filtered[d] = attendanceAll[d]; });
-    return filtered;
-  }, [attendanceAll, dateList]);
-
-  const summary = useMemo(() => {
-    return computeCourseAttendanceSummary(rangeAttendance, students);
-  }, [rangeAttendance, students]);
-
-  // Observaciones del rango por alumno
+  // Observaciones por alumno dentro del rango
   const observationsByStudent = useMemo(() => {
-    // observationsAll: { 'YYYY-MM-DD': { studentId: text } }
-    const res = {}; // { studentId: [{date, text}, ...] }
+    const res = {}; // {sid: [{date, text}, ...]}
     Object.entries(observationsAll || {}).forEach(([date, perStudent]) => {
       if (!within(date, fromDate, toDate)) return;
       Object.entries(perStudent || {}).forEach(([sid, text]) => {
         if (!text) return;
-        if (!res[sid]) res[sid] = [];
-        res[sid].push({ date, text });
+        (res[sid] ||= []).push({ date, text });
       });
     });
-    // ordenar cada lista por fecha ascendente
-    Object.keys(res).forEach((sid) => {
-      res[sid].sort((a, b) => (a.date > b.date ? 1 : -1));
-    });
+    Object.keys(res).forEach((sid) => res[sid].sort((a, b) => (a.date > b.date ? 1 : -1)));
     return res;
   }, [observationsAll, fromDate, toDate]);
 
-  const onSaveGrades = async () => {
-    if (!sel.courseId) return;
-    await saveTermGrades(uid, sel.courseId, term, grades);
-    // no bloqueamos UI; ya está en DB
-  };
-
-  const onSavePeriod = async () => {
-    if (!sel.courseId) return;
-    if (!fromDate || !toDate) {
-      alert('Completá desde/hasta');
-      return;
-    }
-    if (toDate < fromDate) {
-      alert('La fecha "hasta" no puede ser menor que "desde"');
-      return;
-    }
-    await saveTermPeriod(uid, sel.courseId, term, { from: fromDate, to: toDate });
-  };
-
-  const onCloseTerm = async () => {
-    if (!sel.courseId) return;
-    if (!fromDate || !toDate) { alert('Definí el período primero'); return; }
-    await saveTermPeriod(uid, sel.courseId, term, { from: fromDate, to: toDate });
-    await saveTermGrades(uid, sel.courseId, term, grades);
-    await closeTerm(uid, sel.courseId, term, { notes });
-    alert(`Trimestre ${term} cerrado`);
-  };
-
   const onChangeGrade = (sid, value) => {
-    setGrades((g) => ({ ...g, [sid]: value }));
+    setGrades(g => ({ ...g, [sid]: value === '' ? '' : clampGrade(value) }));
   };
 
-  const classesGiven = summary.totalClasses; // clases dentro del rango
 
-  // ===== Exportar PDF =====
-  const exportPDF = async (mode = 'all') => {
-    // mode: 'all' | studentId
+  const [schools, setSchools] = useState({});
+
+  useEffect(() => {
+    if (!uid) return;
+    const off = subscribeSchools(uid, setSchools);
+    return () => off && off();
+  }, [uid]);
+
+
+  // ===== Export: Resumen PDF (alumnos + nota)
+  const exportSummaryPDF = async () => {
+    if (!sel.courseId) return;
     const jsPDF = (await import('jspdf')).default;
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const mm = (n) => n * 2.83465;
+    let y = mm(25);
 
-    const mm = (n) => n * 2.83465; // conversión mm -> pt aprox si necesitás
-    const courseLabel = `Curso: ${sel.courseId}`;
-    const periodLabel = `Período: ${fromDate || '—'} a ${toDate || '—'}`;
-    const today = new Date().toLocaleDateString();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text(`Cierre de Trimestre ${term}`, mm(20), y); y += mm(7);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    const schoolName = schools?.[sel.schoolId]?.name || sel.schoolId || '—';
+    doc.text(`Colegio: ${schoolName}`, mm(20), y); y += mm(6);
 
-    const studentsList = Object.entries(students)
-      .map(([id, s]) => ({ id, ...s }))
-      .sort((a, b) => {
-        const A = `${a.lastName} ${a.firstName}`.toLowerCase();
-        const B = `${b.lastName} ${b.firstName}`.toLowerCase();
-        return A.localeCompare(B);
-      })
-      .filter(s => mode === 'all' ? true : s.id === mode);
+    doc.text(`Período: ${fromDate || '—'} a ${toDate || '—'}`, mm(20), y); y += mm(12);
 
-    if (studentsList.length === 0) return;
+    doc.setFont('helvetica', 'bold'); doc.text('Alumno', mm(20), y);
+    doc.text('Nota', mm(160), y); y += mm(8);
+    doc.setLineWidth(0.5); doc.line(mm(20), y, mm(190), y); y += mm(6);
+    doc.setFont('helvetica', 'normal');
 
-    let firstPage = true;
+    for (const s of orderedStudents) {
+      const grade = grades?.[s.id] ?? '';
+      const name = `${s.lastName || ''}, ${s.firstName || ''}`.trim();
+      doc.text(name, mm(20), y);
+      doc.text(String(grade || '—'), mm(160), y);
+      y += mm(7);
+      if (y > mm(280)) { doc.addPage(); y = mm(25); }
+    }
 
-    for (const s of studentsList) {
-      if (!firstPage) doc.addPage();
-      firstPage = false;
+    doc.save(`resumen_${term}_${sel.courseId}.pdf`);
+  };
 
-      const sid = s.id;
-      const r = summary.byStudent?.[sid] || { presents: 0, absences: 0, percent: 0 };
-      const grade = grades?.[sid] ?? '';
+  // ===== Export: Detalle por alumno (observaciones del rango)
+  const exportStudentDetailPDF = async (sid) => {
+    const s = students[sid];
+    if (!s) return;
+    const jsPDF = (await import('jspdf')).default;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const mm = (n) => n * 2.83465;
+    let y = mm(25);
 
-      // ===== Página 1: portada alumno + nota
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
-      doc.text(`Cierre de trimestre ${term}`, mm(20), mm(30));
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
-      doc.text(courseLabel, mm(20), mm(40));
-      doc.text(periodLabel, mm(20), mm(50));
-      doc.text(`Emisión: ${today}`, mm(20), mm(60));
+    const items = observationsByStudent?.[sid] || [];
 
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
-      doc.text(`${s.lastName}, ${s.firstName}`, mm(20), mm(85));
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
-      doc.text(`DNI: ${s.dni || '—'}`, mm(20), mm(95));
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text(`Detalle de Observaciones — ${term}`, mm(20), y); y += mm(9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text(`Alumno: ${s.lastName || ''}, ${s.firstName || ''}`, mm(20), y); y += mm(6);
+    if (s.dni) { doc.text(`DNI: ${s.dni}`, mm(20), y); y += mm(6); }
+    doc.text(`Período: ${fromDate || '—'} a ${toDate || '—'}`, mm(20), y); y += mm(10);
 
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(22);
-      doc.text(`Nota: ${String(grade || '—')}`, mm(20), mm(120));
-
-      // un poco de resumen corto
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
-      doc.text(`Clases dictadas (rango): ${classesGiven}`, mm(20), mm(145));
-      doc.text(`Presentes: ${r.presents}  |  Faltas: ${r.absences}  |  % Asistencia: ${r.percent}%`, mm(20), mm(160));
-
-      // ===== Página 2: detalle asistencias + observaciones
-      doc.addPage();
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
-      doc.text(`Detalle de asistencias y observaciones`, mm(20), mm(30));
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
-
-      let y = mm(45);
-      doc.text(`Fechas del rango (${fromDate || '—'} a ${toDate || '—'})`, mm(20), y); y += mm(8);
-      doc.text(`Clases dictadas: ${classesGiven}`, mm(20), y); y += mm(12);
-
-      // Listado de fechas con estado de asistencia
-      doc.setFont('helvetica', 'bold'); doc.text(`Asistencia por fecha:`, mm(20), y); y += mm(10);
+    if (items.length === 0) {
+      doc.text('— Sin observaciones registradas en el período —', mm(20), y);
+    } else {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Fecha', mm(20), y);
+      doc.text('Observación', mm(50), y);
+      y += mm(8);
+      doc.setLineWidth(0.5); doc.line(mm(20), y, mm(190), y); y += mm(6);
       doc.setFont('helvetica', 'normal');
-      for (const d of dateList) {
-        const present = (attendanceAll?.[d]?.[sid]) === true;
-        const line = `${d}   —   ${present ? 'Presente' : 'Ausente'}`;
-        doc.text(line, mm(25), y);
-        y += mm(7);
-        if (y > mm(280)) { doc.addPage(); y = mm(30); }
-      }
 
-      // Observaciones
-      const obsRows = observationsByStudent?.[sid] || [];
-      if (y > mm(250)) { doc.addPage(); y = mm(30); }
-      doc.setFont('helvetica', 'bold'); doc.text(`Observaciones:`, mm(20), y); y += mm(10);
-      doc.setFont('helvetica', 'normal');
-      if (obsRows.length === 0) {
-        doc.text('— Sin observaciones registradas en el período —', mm(25), y); y += mm(8);
-      } else {
-        for (const row of obsRows) {
-          const txt = `${row.date}: ${row.text}`;
-          // wrap simple
-          const wrapped = doc.splitTextToSize(txt, mm(170));
-          for (const w of wrapped) {
-            doc.text(w, mm(25), y);
-            y += mm(7);
-            if (y > mm(280)) { doc.addPage(); y = mm(30); }
-          }
-          y += mm(3);
+      for (const row of items) {
+        // Wrap del texto para no salirse
+        const wrapped = doc.splitTextToSize(row.text, mm(130));
+        doc.text(row.date, mm(20), y);
+        for (const line of wrapped) {
+          doc.text(line, mm(50), y);
+          y += mm(6);
+          if (y > mm(280)) { doc.addPage(); y = mm(25); }
         }
+        y += mm(2);
       }
     }
 
-    doc.save(`cierre_${term}_${sel.courseId}.pdf`);
+    const nameSlug = `${(s.lastName || '').replace(/\s+/g, '_')}_${(s.firstName || '').replace(/\s+/g, '_')}`.toLowerCase();
+    doc.save(`detalle_${term}_${nameSlug}.pdf`);
+  };
+
+  // ===== Confirmar cierre (modal)
+  const confirmClose = async () => {
+    if (!sel.courseId || !fromDate || !toDate) return;
+    try {
+      setClosing(true);
+      // guardamos período y notas antes de cerrar
+      await saveTermPeriod(uid, sel.courseId, term, { from: fromDate, to: toDate });
+      await saveTermGrades(uid, sel.courseId, term, grades);
+      await closeTerm(uid, sel.courseId, term, { notes });
+      setClosing(false);
+      setShowConfirm(false);
+    } catch (e) {
+      console.error(e);
+      setClosing(false);
+      // Podés agregar un pequeño mensaje visual si querés (badge/texto), evitamos alert
+    }
   };
 
   return (
-    <div className="card shadow-sm">
-      <div className="card-body">
-        <h2 className="h6 mb-3">Cierre de Trimestre</h2>
+    <>
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <h2 className="h6 mb-3">Cierre de Trimestre</h2>
 
-        {/* Selección curso y trimestre */}
-        <div className="row g-3">
-          <div className="col">
-            <SelectSchoolCourse value={sel} onChange={setSel} />
+          {/* Filtros mínimos, mobile-first */}
+          <div className="row g-2">
+            <div className="col-12">
+              <SelectSchoolCourse value={sel} onChange={setSel} />
+            </div>
+            <div className="col-4">
+              <label className="form-label">Trimestre</label>
+              <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value.toUpperCase())}>
+                <option value="T1">T1</option>
+                <option value="T2">T2</option>
+                <option value="T3">T3</option>
+              </select>
+            </div>
+            <div className="col-4">
+              <label className="form-label">Desde</label>
+              <input className="form-control" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            </div>
+            <div className="col-4">
+              <label className="form-label">Hasta</label>
+              <input className="form-control" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+            </div>
+            <div className="col-12">
+              <label className="form-label">Notas del cierre (opcional)</label>
+              <input className="form-control" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej.: Observaciones generales del trimestre" />
+            </div>
           </div>
-          <div className="col-12 col-md-2">
-            <label className="form-label">Trimestre</label>
-            <select className="form-select" value={term} onChange={(e)=>setTerm(e.target.value.toUpperCase())}>
-              <option value="T1">T1</option>
-              <option value="T2">T2</option>
-              <option value="T3">T3</option>
-            </select>
-          </div>
-          <div className="col-6 col-md-2">
-            <label className="form-label">Desde</label>
-            <input className="form-control" type="date" value={fromDate} onChange={(e)=>setFromDate(e.target.value)} />
-          </div>
-          <div className="col-6 col-md-2">
-            <label className="form-label">Hasta</label>
-            <input className="form-control" type="date" value={toDate} onChange={(e)=>setToDate(e.target.value)} />
-          </div>
-          <div className="col-12 col-md-3">
-            <label className="form-label">Notas del cierre (opcional)</label>
-            <input className="form-control" value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="Ej.: Evaluación integral…" />
-          </div>
-        </div>
 
-        <div className="mt-3 d-flex flex-wrap gap-2">
-          <button className="btn btn-outline-secondary" onClick={onSavePeriod} disabled={!fromDate || !toDate || !sel.courseId}>Guardar período</button>
-          <button className="btn btn-outline-success" onClick={onSaveGrades} disabled={!sel.courseId}>Guardar notas</button>
-          <button className="btn btn-dark" onClick={onCloseTerm} disabled={!sel.courseId || !fromDate || !toDate}>Cerrar trimestre</button>
-          <div className="ms-auto d-flex gap-2">
-            <button className="btn btn-outline-primary" onClick={() => exportPDF('all')} disabled={!sel.courseId || !fromDate || !toDate}>Exportar PDF (todos)</button>
+          {/* Acciones minimalistas */}
+          <div className="d-flex flex-wrap gap-2 mt-3">
+            <button
+              className="btn btn-outline-primary btn-sm"
+              onClick={exportSummaryPDF}
+              disabled={!sel.courseId || !fromDate || !toDate || loading}
+            >
+              Descargar resumen PDF
+            </button>
+            <button
+              className="btn btn-dark btn-sm ms-auto"
+              onClick={openConfirm}
+              disabled={!sel.courseId || !fromDate || !toDate || loading}
+              title="Guardar período, notas y cerrar"
+            >
+              Cerrar trimestre
+            </button>
           </div>
-        </div>
 
-        <hr />
-
-        {/* Resumen y notas por alumno */}
-        <div className="table-responsive">
-          <table className="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>Alumno</th>
-                <th className="text-center">Clases (rango)</th>
-                <th className="text-center">Presentes</th>
-                <th className="text-center">Faltas</th>
-                <th className="text-center">% Asist.</th>
-                <th style={{width: 120}}>Nota</th>
-                <th className="text-end" style={{width: 140}}>PDF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(students).length === 0 && (
-                <tr><td colSpan="7">{loading ? 'Cargando…' : 'Elegí un curso'}</td></tr>
-              )}
-              {Object.entries(students).map(([sid, s]) => {
-                const r = summary.byStudent?.[sid] || { presents: 0, absences: 0, percent: 0 };
-                return (
-                  <tr key={sid}>
-                    <td>{s.lastName}, {s.firstName}</td>
-                    <td className="text-center">{summary.totalClasses}</td>
-                    <td className="text-center">{r.presents}</td>
-                    <td className="text-center">{r.absences}</td>
-                    <td className="text-center">{r.percent}%</td>
+          {/* Tabla super simple y responsive */}
+          <div className="table-responsive mt-3">
+            <table className="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Alumno</th>
+                  <th style={{ width: 100 }}>Nota (1–10)</th>
+                  <th className="text-end" style={{ width: 120 }}>Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orderedStudents.length === 0 && (
+                  <tr><td colSpan="3">{loading ? 'Cargando…' : 'Elegí un curso'}</td></tr>
+                )}
+                {orderedStudents.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <div className="fw-medium">{s.lastName}, {s.firstName}</div>
+                      {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
+                    </td>
                     <td>
                       <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={10}
                         className="form-control form-control-sm"
-                        value={grades?.[sid] ?? ''}
-                        onChange={(e)=>onChangeGrade(sid, e.target.value)}
-                        placeholder="Ej.: 8 / MB"
+                        value={grades?.[s.id] ?? ''}
+                        onChange={(e) => onChangeGrade(s.id, e.target.value)}
+                        onBlur={(e) => {
+                          const v = clampGrade(e.target.value);
+                          setGrades(g => ({ ...g, [s.id]: v === '' ? '' : v }));
+                        }}
+                        placeholder="1–10"
                       />
                     </td>
                     <td className="text-end">
                       <button
-                        className="btn btn-outline-primary btn-sm"
-                        onClick={() => exportPDF(sid)}
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={() => exportStudentDetailPDF(s.id)}
                         disabled={!fromDate || !toDate}
+                        title="Descargar PDF de observaciones"
                       >
-                        Exportar PDF
+                        PDF observaciones
                       </button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <small className="text-muted">
-          El PDF por alumno incluye: portada con nombre y nota, y una segunda página con detalle de asistencias y observaciones del período seleccionado.
-        </small>
+          <small className="text-muted">Las notas se limitarán entre 1 y 10 automáticamente.</small>
+        </div>
       </div>
-    </div>
+
+      {/* Modal de confirmación de cierre */}
+      {showConfirm && (
+        <>
+          <div className="modal-backdrop fade show" onClick={closeConfirm} style={{ zIndex: 1040 }} />
+          <div
+            className="modal fade show"
+            role="dialog"
+            aria-modal="true"
+            style={{ display: 'block', zIndex: 1050 }}
+            aria-labelledby="closeTermLabel"
+            aria-hidden="false"
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 id="closeTermLabel" className="modal-title">Confirmar cierre</h5>
+                  <button type="button" className="btn-close" aria-label="Close" onClick={closeConfirm} disabled={closing} />
+                </div>
+                <div className="modal-body">
+                  <p className="mb-2">Se guardará el <strong>período</strong>, las <strong>notas</strong> y se marcará el trimestre <strong>{term}</strong> como cerrado.</p>
+                  <p className="mb-0">Período: <code>{fromDate || '—'}</code> a <code>{toDate || '—'}</code></p>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-outline-secondary" onClick={closeConfirm} disabled={closing}>Cancelar</button>
+                  <button type="button" className="btn btn-dark" onClick={confirmClose} disabled={closing}>
+                    {closing ? 'Cerrando…' : 'Confirmar cierre'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
