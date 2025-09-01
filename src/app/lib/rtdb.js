@@ -221,3 +221,15 @@ export async function deleteSchoolDeep(uid, schoolId) {
 
 	await update(ref(db), updates);
 }
+// Guarda/actualiza el período (rango de fechas) del trimestre
+export async function saveTermPeriod(uid, courseId, term, period) {
+	// period: { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }
+	const termRef = ref(db, `teachers/${uid}/terms/${courseId}/${term}`);
+	await update(termRef, {
+		period: {
+			from: period?.from || null,
+			to: period?.to || null,
+		},
+		updatedAt: serverTimestamp(),
+	});
+}

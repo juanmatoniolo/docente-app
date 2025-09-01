@@ -8,10 +8,9 @@ import { signOut } from 'firebase/auth';
 import {
   addSchool,
   addCourse,
-  addStudentObservation,
-  markAttendance,
   closeTerm,
-} from './lib/rtdb';                                 
+} from './lib/rtdb';             
+import { saveObservation, saveAttendance } from "./lib/rtdb";                    
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
