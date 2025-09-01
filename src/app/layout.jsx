@@ -15,17 +15,20 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es-AR">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
+
       <body suppressHydrationWarning className="bg-light text-dark">
         {/* HEADER simple */}
         <header className="bg-white shadow-sm border-bottom">
           <div className="container d-flex justify-content-between align-items-center py-3">
-            {/* Marca o título */}
-            <Link
-              href="/"
-              className="fw-bold text-primary fs-5 text-decoration-none"
-            >
-              Docentes App
+
+            <Link href="/" className="fw-bold text-primary  fs-5 text-decoration-none">
+              <img src="/logo-bluee.png" alt="Docentes App" height="60" />
+              <img src="/docentes-app.png" alt="Docentes app" height={60} />
             </Link>
+
 
             {/* Botón Entrar */}
             <div className="d-flex gap-2">
