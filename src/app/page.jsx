@@ -1,5 +1,6 @@
 // app/page.jsx
 import Link from "next/link";
+// o bootstrap.bundle.min.js
 
 export default function HomePage() {
   return (

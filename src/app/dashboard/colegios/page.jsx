@@ -1,18 +1,7 @@
+export const dynamic = "force-dynamic"; // evita SSG/ISR en build
 
-"use client";
+import ClientPage from "./ClientPage";
 
-import React from 'react'
-import SchoolsManager from '../../components/SchoolsManager'
-import CoursesManager from '../../components/CoursesManager'
-
-const page = () => {
-  return (
-    <>
-      <CoursesManager />
-      <br />
-      <SchoolsManager />
-    </>
-  )
+export default function Page() {
+  return <ClientPage />;
 }
-
-export default page

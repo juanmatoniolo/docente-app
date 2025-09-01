@@ -1,7 +1,7 @@
-import React from "react";
-import TermClosureWrapper from "./TermClosureWrapper";
+export const dynamic = "force-dynamic";
 
-export default function CierrePage() {
-  // Server Component simple que solo carga el Client Component
-  return <TermClosureWrapper />;
+import ClientPage from "./ClientPage";
+
+export default function Page() {
+  return <ClientPage />;
 }

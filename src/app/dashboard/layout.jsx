@@ -136,7 +136,7 @@ export default function DashboardLayout({ children }) {
                 <li className="nav-item">
                   <Link
                     href="/dashboard/Cierre"
-                    className={`nav-link ${isActive("/dashboard/Cierre")}`}
+                    className={`nav-link ${isActive("/dashboard/cierre")}`}
                   >
                     Cierre de Trimestre
                   </Link>
@@ -204,7 +204,7 @@ export default function DashboardLayout({ children }) {
                 <li className="nav-item">
                   <Link
                     href="/dashboard/Cierre"
-                    className={`nav-link ${isActive("/dashboard/Cierre")}`}
+                    className={`nav-link ${isActive("/dashboard/cierre")}`}
                     onClick={closeOffcanvas}
                   >
                     Cierre de Trimestre
