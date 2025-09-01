@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { getApps, getApp, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
-// Footer.jsx
-import { FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { FaWhatsapp, FaInstagram, FaLinkedin } from "react-icons/fa";
 
-// Config de Firebase (igual que en page.jsx)
+// Config de Firebase
 const firebaseConfig = {
   apiKey:
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
@@ -33,7 +32,6 @@ function getFirebaseApp() {
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-
   const auth = useMemo(() => getAuth(getFirebaseApp()), []);
 
   const isActive = (href) => (pathname === href ? "active" : "");
@@ -41,11 +39,13 @@ export default function DashboardLayout({ children }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.replace("/"); // 🔁 Te manda de nuevo al login principal
+      router.replace("/");
     } catch (err) {
       console.error("Error cerrando sesión:", err);
     }
   };
+
+  const currentUser = auth.currentUser;
 
   return (
     <>
@@ -62,10 +62,9 @@ export default function DashboardLayout({ children }) {
             ☰
           </button>
           <Link className="navbar-brand fw-semibold" href="/dashboard">
-            Docente App
+            Docente: {currentUser?.displayName || "Usuario"}
           </Link>
           <div className="ms-auto d-flex align-items-center gap-2">
-            {/* BOTÓN DE CERRAR SESIÓN */}
             <button
               onClick={handleLogout}
               className="btn btn-outline-light btn-sm"
@@ -77,9 +76,9 @@ export default function DashboardLayout({ children }) {
       </nav>
 
       {/* LAYOUT */}
-      <div className="container-fluid">
-        <div className="row">
-          {/* SIDEBAR (lg+) */}
+      <div className="container-fluid d-flex flex-column min-vh-100">
+        <div className="row flex-grow-1">
+          {/* SIDEBAR desktop */}
           <aside className="col-lg-3 col-xl-2 d-none d-lg-block border-end bg-white min-vh-100">
             <div className="p-3">
               <h6 className="text-uppercase text-muted mb-3">Menú</h6>
@@ -89,7 +88,7 @@ export default function DashboardLayout({ children }) {
                     href="/dashboard"
                     className={`nav-link ${isActive("/dashboard")}`}
                   >
-                    Dashboard
+                    Panel Docente
                   </Link>
                 </li>
                 <li className="nav-item">
@@ -124,12 +123,11 @@ export default function DashboardLayout({ children }) {
                     Cierre de Trimestre
                   </Link>
                 </li>
-
               </ul>
             </div>
           </aside>
 
-          {/* SIDEBAR (mobile) como Offcanvas */}
+          {/* SIDEBAR mobile (offcanvas) */}
           <div
             className="offcanvas offcanvas-start"
             tabIndex="-1"
@@ -145,7 +143,7 @@ export default function DashboardLayout({ children }) {
                 className="btn-close"
                 data-bs-dismiss="offcanvas"
                 aria-label="Close"
-              ></button>
+              />
             </div>
             <div className="offcanvas-body">
               <ul className="nav nav-pills flex-column gap-1">
@@ -153,16 +151,14 @@ export default function DashboardLayout({ children }) {
                   <Link
                     href="/dashboard"
                     className={`nav-link ${isActive("/dashboard")}`}
-                    data-bs-dismiss="offcanvas"
                   >
-                    Dashboard
+                    Panel Docente
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     href="/dashboard/colegios"
                     className={`nav-link ${isActive("/dashboard/colegios")}`}
-                    data-bs-dismiss="offcanvas"
                   >
                     Colegios
                   </Link>
@@ -171,18 +167,24 @@ export default function DashboardLayout({ children }) {
                   <Link
                     href="/dashboard/cursos"
                     className={`nav-link ${isActive("/dashboard/cursos")}`}
-                    data-bs-dismiss="offcanvas"
                   >
-                    Cursos
+                    Alumnos
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     href="/dashboard/asistencia"
                     className={`nav-link ${isActive("/dashboard/asistencia")}`}
-                    data-bs-dismiss="offcanvas"
                   >
                     Asistencia
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    href="/dashboard/Cierre"
+                    className={`nav-link ${isActive("/dashboard/Cierre")}`}
+                  >
+                    Cierre de Trimestre
                   </Link>
                 </li>
               </ul>
@@ -194,44 +196,36 @@ export default function DashboardLayout({ children }) {
             <div className="container">{children}</div>
           </main>
         </div>
+      </div>
 
-
-<footer className="bg-gray-800 text-white py-6 mt-10">
-      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
-        <p className="text-sm mb-4 md:mb-0">
-          © {new Date().getFullYear()} Juanma Toniolo. Todos los derechos reservados.
-        </p>
-        <div className="flex space-x-6">
-          <a
-            href="https://wa.me/543412275598"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-green-500 transition-colors"
-          >
-            <FaWhatsapp size={24} />
-          </a>
-          <a
-            href="https://www.instagram.com/juanmatoniolo/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-pink-500 transition-colors"
-          >
-            <FaInstagram size={24} />
-          </a>
-          <a
-            href="https://www.linkedin.com/in/juanmatoniolo/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-blue-500 transition-colors"
-          >
-            <FaLinkedin size={24} />
-          </a>
+      {/* FOOTER responsivo */}
+      <footer className="bg-primary text-white mt-auto py-3">
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-12 col-md-6 text-center text-md-start mb-3 mb-md-0">
+              <small className="fw-light">
+                © {new Date().getFullYear()} <strong>Juanma Toniolo</strong>. Todos los derechos reservados.
+              </small>
+            </div>
+            <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end gap-4">
+              <a href="https://wa.me/543412275598" target="_blank" rel="noopener noreferrer" className="text-white">
+                <FaWhatsapp size={26} className="opacity-75 hover-opacity" />
+              </a>
+              <a href="https://www.instagram.com/juanmatoniolo/" target="_blank" rel="noopener noreferrer" className="text-white">
+                <FaInstagram size={26} className="opacity-75 hover-opacity" />
+              </a>
+              <a href="https://www.linkedin.com/in/juanmatoniolo/" target="_blank" rel="noopener noreferrer" className="text-white">
+                <FaLinkedin size={26} className="opacity-75 hover-opacity" />
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
-    </footer>
-
-
-      </div>
+        <style jsx>{`
+          .hover-opacity:hover {
+            opacity: 1 !important;
+          }
+        `}</style>
+      </footer>
     </>
   );
 }

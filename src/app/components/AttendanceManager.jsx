@@ -121,17 +121,9 @@ export default function AttendanceManager() {
     await saveObservation(uid, sel.courseId, dateISO, sid, text);
     const obs = await getObservations(uid, sel.courseId);
     setObservations(obs);
-    // limpiar input
     const el = document.getElementById(`obs-${sid}`);
     if (el) el.value = '';
     toastFlash('Observación guardada ✔');
-  };
-
-  const onRowKeyDown = (e, sid) => {
-    if (e.code === 'Space') {
-      e.preventDefault();
-      togglePresent(sid);
-    }
   };
 
   const openHistory = (student) => {
@@ -194,27 +186,28 @@ export default function AttendanceManager() {
 
           <SelectSchoolCourse value={sel} onChange={setSel} />
 
-          <div className="row g-3 mt-3 align-items-end">
-            <div className="col-auto">
+          {/* Controles */}
+          <div className="row g-2 mt-3 align-items-end">
+            <div className="col-12 col-md-auto">
               <label className="form-label mb-1">Fecha</label>
               <input
-                className="form-control"
+                className="form-control form-control-sm"
                 type="date"
                 value={dateISO}
                 onChange={(e) => setDateISO(e.target.value)}
               />
             </div>
 
-            <div className="col-12 col-md d-flex flex-wrap gap-2">
-              <button className="btn btn-outline-success" onClick={() => setAll(true)}>Marcar todos</button>
-              <button className="btn btn-outline-secondary" onClick={() => setAll(false)}>Marcar nadie</button>
-              <button className="btn btn-outline-warning" onClick={invertAll}>Invertir</button>
+            <div className="col-12 col-md d-flex flex-nowrap gap-2 overflow-auto">
+              <button className="btn btn-outline-success btn-sm" onClick={() => setAll(true)}>Todos</button>
+              <button className="btn btn-outline-secondary btn-sm" onClick={() => setAll(false)}>Nadie</button>
+              <button className="btn btn-outline-warning btn-sm" onClick={invertAll}>Invertir</button>
             </div>
 
             <div className="col-12 col-md-4">
-              <label className="form-label mb-1">Buscar alumno</label>
+              <label className="form-label mb-1">Buscar</label>
               <input
-                className="form-control"
+                className="form-control form-control-sm"
                 placeholder="Nombre, apellido o DNI"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
@@ -222,98 +215,150 @@ export default function AttendanceManager() {
             </div>
           </div>
 
-          <div className="table-responsive mt-3">
-            <table className="table align-middle table-sm">
-              <thead>
-                <tr>
-                  <th style={{ minWidth: 220 }}>Alumno</th>
-                  <th className="text-center" style={{ width: 150 }}>Presente</th>
-                  <th>Observación (del día)</th>
-                  <th className="text-end" style={{ width: 120 }}>Historial</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderedStudents.map((s) => {
-                  const sid = s.id;
-                  const isPresent = attendance?.[sid] === true;
-                  const obsText = (observations?.[dateISO]?.[sid]) || '';
+          {/* Lista de alumnos en vista responsive */}
+          <div className="mt-3">
+            {/* Mobile cards */}
+            <div className="d-block d-md-none">
+              {orderedStudents.map((s) => {
+                const sid = s.id;
+                const isPresent = attendance?.[sid] === true;
+                const obsText = (observations?.[dateISO]?.[sid]) || '';
 
-                  return (
-                    <tr
-                      key={sid}
-                      tabIndex={0}
-                      ref={(el) => { rowRefs.current[sid] = el; }}
-                      onKeyDown={(e) => onRowKeyDown(e, sid)}
-                      onClick={(e) => {
-                        const tag = (e.target.tagName || '').toLowerCase();
-                        if (['input', 'button', 'textarea', 'label', 'svg', 'path'].includes(tag)) return;
-                        togglePresent(sid);
-                      }}
-                      className="user-select-none"
-                      style={{ cursor: 'pointer' }}
+                return (
+                  <div key={sid} className="card mb-2 p-2 shadow-sm">
+                    <div className="fw-medium">{s.lastName}, {s.firstName}</div>
+                    {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
+                    <div className="mt-2 d-flex gap-2">
+                      <button
+                        className={`btn btn-sm flex-fill ${isPresent ? 'btn-success' : 'btn-outline-success'}`}
+                        onClick={() => setAttendance(prev => ({ ...prev, [sid]: true }))}
+                      >
+                        Presente
+                      </button>
+                      <button
+                        className={`btn btn-sm flex-fill ${!isPresent ? 'btn-danger' : 'btn-outline-danger'}`}
+                        onClick={() => setAttendance(prev => ({ ...prev, [sid]: false }))}
+                      >
+                        Ausente
+                      </button>
+                    </div>
+                    <div className="input-group input-group-sm mt-2">
+                      <input
+                        className="form-control"
+                        defaultValue={obsText}
+                        placeholder="Observación..."
+                        id={`obs-${sid}`}
+                      />
+                      <button
+                        className="btn btn-outline-secondary"
+                        onClick={() => handleSaveObs(sid, document.getElementById(`obs-${sid}`)?.value || '')}
+                      >
+                        ✔
+                      </button>
+                    </div>
+                    <button
+                      className="btn btn-outline-primary btn-sm mt-2"
+                      onClick={() => openHistory(s)}
                     >
-                      <td data-label="Alumno">
-                        <div className="fw-medium">{s.lastName}, {s.firstName}</div>
-                        {s.dni && <small className="text-muted d-block">DNI: {s.dni}</small>}
-                      </td>
+                      Ver historial
+                    </button>
+                  </div>
+                );
+              })}
+              {orderedStudents.length === 0 && (
+                <div className="text-muted">Elegí un curso para ver alumnos</div>
+              )}
+            </div>
 
-                      <td className="text-center" data-label="Presente">
-                        <div className="btn-group mb-2 mb-md-0" role="group">
+            {/* Desktop table */}
+            <div className="table-responsive d-none d-md-block">
+              <table className="table align-middle table-sm">
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th className="text-center">Presente</th>
+                    <th>Observación</th>
+                    <th className="text-end">Historial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderedStudents.map((s) => {
+                    const sid = s.id;
+                    const isPresent = attendance?.[sid] === true;
+                    const obsText = (observations?.[dateISO]?.[sid]) || '';
+
+                    return (
+                      <tr key={sid}>
+                        <td>
+                          {s.lastName}, {s.firstName}
+                          {s.dni && <small className="text-muted d-block">DNI: {s.dni}</small>}
+                        </td>
+                        <td className="text-center">
+                          <div className="btn-group" role="group">
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${isPresent ? 'btn-success' : 'btn-outline-success'}`}
+                              onClick={() => setAttendance(prev => ({ ...prev, [sid]: true }))}
+                            >Presente</button>
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${!isPresent ? 'btn-danger' : 'btn-outline-danger'}`}
+                              onClick={() => setAttendance(prev => ({ ...prev, [sid]: false }))}
+                            >Ausente</button>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="input-group input-group-sm">
+                            <input
+                              className="form-control"
+                              defaultValue={obsText}
+                              placeholder="Observación..."
+                              id={`obs-${sid}`}
+                            />
+                            <button
+                              className="btn btn-outline-secondary"
+                              onClick={() => handleSaveObs(sid, document.getElementById(`obs-${sid}`)?.value || '')}
+                            >Guardar</button>
+                          </div>
+                        </td>
+                        <td className="text-end">
                           <button
-                            type="button"
-                            className={`btn btn-sm ${isPresent ? 'btn-success' : 'btn-outline-success'}`}
-                            onClick={() => setAttendance(prev => ({ ...prev, [sid]: true }))}
-                          >Presente</button>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${!isPresent ? 'btn-danger' : 'btn-outline-danger'}`}
-                            onClick={() => setAttendance(prev => ({ ...prev, [sid]: false }))}
-                          >Ausente</button>
-                        </div>
-                        <div className="form-text">Tip: barra espaciadora alterna</div>
-                      </td>
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={() => openHistory(s)}
+                          >Historial</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                      <td data-label="Observación">
-                        <div className="input-group input-group-sm">
-                          <input
-                            className="form-control"
-                            defaultValue={obsText}
-                            placeholder="Ej.: No quiso participar…"
-                            id={`obs-${sid}`}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <button
-                            className="btn btn-outline-secondary"
-                            onClick={(e) => { e.stopPropagation(); handleSaveObs(sid, document.getElementById(`obs-${sid}`)?.value || ''); }}
-                          >Guardar</button>
-                        </div>
-                      </td>
-
-                      <td className="text-end" data-label="Historial">
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary btn-sm"
-                          onClick={(e) => { e.stopPropagation(); openHistory(s); }}
-                        >Historial</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {orderedStudents.length === 0 && (
-                  <tr><td colSpan="4">Elegí un curso para ver alumnos</td></tr>
-                )}
-              </tbody>
-            </table>
-
-            <div className="d-flex justify-content-end">
-              <button className="btn btn-dark" onClick={handleSave}>Guardar asistencia</button>
+            <div className="d-flex justify-content-end mt-3">
+              <button className="btn btn-dark btn-sm" onClick={handleSave}>Guardar asistencia</button>
             </div>
           </div>
 
+          {/* Resumen */}
           <div className="mt-4">
             <h3 className="h6">Resumen del curso</h3>
             <p className="text-muted mb-2">Clases dadas: <strong>{summary.totalClasses}</strong></p>
-            <div className="table-responsive">
+
+            {/* Mobile cards */}
+            <div className="d-block d-md-none">
+              {Object.entries(students).map(([sid, s]) => {
+                const r = summary.byStudent?.[sid] || { presents: 0, absences: 0, percent: 0 };
+                return (
+                  <div key={sid} className="card p-2 mb-2 shadow-sm">
+                    <div className="fw-medium">{s.lastName}, {s.firstName}</div>
+                    <small>Presentes: {r.presents} | Faltas: {r.absences} | {r.percent}%</small>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="table-responsive d-none d-md-block">
               <table className="table table-sm align-middle">
                 <thead>
                   <tr>
@@ -335,9 +380,6 @@ export default function AttendanceManager() {
                       </tr>
                     );
                   })}
-                  {Object.keys(students).length === 0 && (
-                    <tr><td colSpan="4">Sin alumnos</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -349,50 +391,47 @@ export default function AttendanceManager() {
       {showModal && (
         <>
           <div className="modal-backdrop fade show" onClick={closeHistory} style={{ zIndex: 1040 }} />
-          <div className="modal fade show" role="dialog" aria-modal="true" style={{ display: 'block', zIndex: 1050 }} aria-labelledby="obsHistoryLabel" aria-hidden="false">
-            <div className="modal-dialog modal-lg modal-dialog-centered">
+          <div
+            className="modal fade show"
+            role="dialog"
+            aria-modal="true"
+            style={{ display: 'block', zIndex: 1050 }}
+          >
+            <div className="modal-dialog modal-dialog-centered modal-lg">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 id="obsHistoryLabel" className="modal-title">
+                  <h5 className="modal-title">
                     Historial de observaciones {modalStudent && `– ${modalStudent.lastName}, ${modalStudent.firstName}`}
                   </h5>
                   <button type="button" className="btn-close" aria-label="Close" onClick={closeHistory} />
                 </div>
                 <div className="modal-body">
                   <div className="row g-2 align-items-end">
-                    <div className="col-auto">
+                    <div className="col-6 col-md-auto">
                       <label className="form-label mb-1">Desde</label>
-                      <input className="form-control" type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
+                      <input className="form-control form-control-sm" type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
                     </div>
-                    <div className="col-auto">
+                    <div className="col-6 col-md-auto">
                       <label className="form-label mb-1">Hasta</label>
-                      <input className="form-control" type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
+                      <input className="form-control form-control-sm" type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
                     </div>
                   </div>
-                  <div className="table-responsive mt-3">
-                    <table className="table table-sm">
-                      <thead>
-                        <tr>
-                          <th style={{ width: 130 }}>Fecha</th>
-                          <th>Observación</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <div className="mt-3">
+                    {getHistoryRows().length === 0 ? (
+                      <p className="text-muted">Sin observaciones en el rango seleccionado.</p>
+                    ) : (
+                      <ul className="list-group small">
                         {getHistoryRows().map((row, i) => (
-                          <tr key={i}>
-                            <td><code>{row.date}</code></td>
-                            <td>{row.text}</td>
-                          </tr>
+                          <li key={i} className="list-group-item">
+                            <strong>{row.date}:</strong> {row.text}
+                          </li>
                         ))}
-                        {getHistoryRows().length === 0 && (
-                          <tr><td colSpan="2">Sin observaciones en el rango seleccionado.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
+                      </ul>
+                    )}
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-outline-secondary" onClick={closeHistory}>Cerrar</button>
+                  <button type="button" className="btn btn-outline-secondary btn-sm" onClick={closeHistory}>Cerrar</button>
                 </div>
               </div>
             </div>

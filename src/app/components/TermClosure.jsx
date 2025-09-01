@@ -266,183 +266,135 @@ export default function TermClosure() {
   };
 
   return (
-    <>
-      <div className="card shadow-sm">
-        <div className="card-body">
-          <h2 className="h6 mb-3">Cierre de Trimestre</h2>
+    <><div className="card shadow-sm">
+  <div className="card-body">
+    <h2 className="h6 mb-3">Cierre de Trimestre</h2>
 
-          {/* Filtros mínimos, mobile-first */}
-          <div className="row g-2">
-            <div className="col-12">
-              <SelectSchoolCourse value={sel} onChange={setSel} />
-            </div>
-            <div className="col-4">
-              <label className="form-label">Trimestre</label>
-              <select className="form-select" value={term} onChange={(e)=>setTerm(e.target.value.toUpperCase())}>
-                <option value="T1">T1</option>
-                <option value="T2">T2</option>
-                <option value="T3">T3</option>
-              </select>
-            </div>
-            <div className="col-4">
-              <label className="form-label">Desde</label>
-              <input className="form-control" type="date" value={fromDate} onChange={(e)=>setFromDate(e.target.value)} />
-            </div>
-            <div className="col-4">
-              <label className="form-label">Hasta</label>
-              <input className="form-control" type="date" value={toDate} onChange={(e)=>setToDate(e.target.value)} />
-            </div>
-            <div className="col-12">
-              <label className="form-label">Notas del cierre (opcional)</label>
-              <input className="form-control" value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="Ej.: Observaciones generales del trimestre" />
-            </div>
-          </div>
-
-          {/* Acciones minimalistas */}
-          <div className="d-flex flex-wrap gap-2 mt-3">
-            <button
-              className="btn btn-outline-primary btn-sm"
-              onClick={exportSummaryPDF}
-              disabled={!sel.courseId || !fromDate || !toDate || loading}
-            >
-              Descargar resumen PDF
-            </button>
-            <button
-              className="btn btn-dark btn-sm ms-auto"
-              onClick={openConfirm}
-              disabled={!sel.courseId || !fromDate || !toDate || loading}
-              title="Guardar período, notas y cerrar"
-            >
-              Cerrar trimestre
-            </button>
-          </div>
-
-          {/* Tabla super simple y responsive */}
-          <div className="table-responsive mt-3">
-            <table className="table table-sm align-middle">
-              <thead>
-                <tr>
-                  <th>Alumno</th>
-                  <th style={{ width: 100 }}>Nota (1–10)</th>
-                  <th className="text-end" style={{ width: 120 }}>Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderedStudents.length === 0 && (
-                  <tr><td colSpan="3">{loading ? 'Cargando…' : 'Elegí un curso'}</td></tr>
-                )}
-                {orderedStudents.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <div className="fw-medium">{s.lastName}, {s.firstName}</div>
-                      {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        max={10}
-                        className="form-control form-control-sm"
-                        value={grades?.[s.id] ?? ''}
-                        onChange={(e) => onChangeGrade(s.id, e.target.value)}
-                        onBlur={(e) => {
-                          const v = clampGrade(e.target.value);
-                          setGrades(g => ({ ...g, [s.id]: v === '' ? '' : v }));
-                        }}
-                        placeholder="1–10"
-                      />
-                    </td>
-                    <td className="text-end">
-                      <button
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={() => exportStudentDetailPDF(s.id)}
-                        disabled={!fromDate || !toDate}
-                        title="Descargar PDF de observaciones"
-                      >
-                        PDF observaciones
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <small className="text-muted d-block">Las notas se limitan entre 1 y 10 automáticamente.</small>
-
-          {/* Historial de cierres */}
-          <hr />
-          <h3 className="h6 mb-2">Cierres guardados</h3>
-          <div className="table-responsive">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Trimestre</th>
-                  <th>Período</th>
-                  <th>Estado</th>
-                  <th>Notas/observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.keys(history).length === 0 && (
-                  <tr><td colSpan="4" className="text-muted">Sin cierres aún.</td></tr>
-                )}
-                {Object.entries(history).map(([tKey, tVal]) => (
-                  <tr key={tKey}>
-                    <td><strong>{tKey}</strong></td>
-                    <td>{tVal?.period?.from || '—'} a {tVal?.period?.to || '—'}</td>
-                    <td>
-                      {tVal?.closed ? <span className="badge bg-success">Cerrado</span> : <span className="badge bg-secondary">Borrador</span>}
-                    </td>
-                    <td className="text-truncate" style={{ maxWidth: 320 }}>
-                      {normalizeNotes(tVal?.notes) || '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
+    {/* Filtros mobile-first */}
+    <div className="flex flex-col md:flex-row md:gap-2 gap-2 mb-3">
+      <div className="flex-1">
+        <SelectSchoolCourse value={sel} onChange={setSel} />
+      </div>
+      <div className="flex flex-wrap gap-2 w-full md:w-auto">
+        <div className="flex-1 min-w-[100px]">
+          <label className="form-label">Trimestre</label>
+          <select
+            className="form-select w-full"
+            value={term}
+            onChange={(e)=>setTerm(e.target.value.toUpperCase())}
+          >
+            <option value="T1">T1</option>
+            <option value="T2">T2</option>
+            <option value="T3">T3</option>
+          </select>
+        </div>
+        <div className="flex-1 min-w-[120px]">
+          <label className="form-label">Desde</label>
+          <input
+            type="date"
+            className="form-control w-full"
+            value={fromDate}
+            onChange={(e)=>setFromDate(e.target.value)}
+          />
+        </div>
+        <div className="flex-1 min-w-[120px]">
+          <label className="form-label">Hasta</label>
+          <input
+            type="date"
+            className="form-control w-full"
+            value={toDate}
+            onChange={(e)=>setToDate(e.target.value)}
+          />
         </div>
       </div>
+      <div className="w-full mt-2">
+        <label className="form-label">Notas del cierre (opcional)</label>
+        <input
+          className="form-control w-full"
+          value={notes}
+          onChange={(e)=>setNotes(e.target.value)}
+          placeholder="Ej.: Observaciones generales del trimestre"
+        />
+      </div>
+    </div>
 
-      {/* Modal de confirmación de cierre */}
-      {showConfirm && (
-        <>
-          <div className="modal-backdrop fade show" onClick={closeConfirm} style={{ zIndex: 1040 }} />
-          <div
-            className="modal fade show"
-            role="dialog"
-            aria-modal="true"
-            style={{ display: 'block', zIndex: 1050 }}
-            aria-labelledby="closeTermLabel"
-            aria-hidden="false"
-          >
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 id="closeTermLabel" className="modal-title">Confirmar cierre</h5>
-                  <button type="button" className="btn-close" aria-label="Close" onClick={closeConfirm} disabled={closing} />
-                </div>
-                <div className="modal-body">
-                  <p className="mb-2">
-                    Se guardará el <strong>período</strong>, las <strong>notas</strong> (también dentro de cada alumno)
-                    y se marcará el trimestre <strong>{term}</strong> como cerrado.
-                  </p>
-                  <p className="mb-0">Período: <code>{fromDate || '—'}</code> a <code>{toDate || '—'}</code></p>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-outline-secondary" onClick={closeConfirm} disabled={closing}>Cancelar</button>
-                  <button type="button" className="btn btn-dark" onClick={confirmClose} disabled={closing}>
-                    {closing ? 'Cerrando…' : 'Confirmar cierre'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+    {/* Botones */}
+    <div className="flex flex-col md:flex-row gap-2 mt-3">
+      <button
+        className="btn btn-outline-primary w-full md:w-auto"
+        onClick={exportSummaryPDF}
+        disabled={!sel.courseId || !fromDate || !toDate || loading}
+      >
+        Descargar resumen PDF
+      </button>
+      <button
+        className="btn btn-dark w-full md:w-auto md:ml-auto"
+        onClick={openConfirm}
+        disabled={!sel.courseId || !fromDate || !toDate || loading}
+        title="Guardar período, notas y cerrar"
+      >
+        Cerrar trimestre
+      </button>
+    </div>
+
+    {/* Tabla responsive */}
+    <div className="overflow-x-auto mt-3">
+      <table className="table table-sm w-full text-sm align-middle">
+        <thead className="bg-gray-100">
+          <tr>
+            <th>Alumno</th>
+            <th style={{ minWidth: 80 }}>Nota</th>
+            <th className="text-end" style={{ minWidth: 120 }}>Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orderedStudents.length === 0 && (
+            <tr>
+              <td colSpan="3">{loading ? 'Cargando…' : 'Elegí un curso'}</td>
+            </tr>
+          )}
+          {orderedStudents.map((s) => (
+            <tr key={s.id}>
+              <td>
+                <div className="fw-medium">{s.lastName}, {s.firstName}</div>
+                {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
+              </td>
+              <td>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={10}
+                  className="form-control form-control-sm w-full"
+                  value={grades?.[s.id] ?? ''}
+                  onChange={(e) => onChangeGrade(s.id, e.target.value)}
+                  onBlur={(e) => {
+                    const v = clampGrade(e.target.value);
+                    setGrades(g => ({ ...g, [s.id]: v === '' ? '' : v }));
+                  }}
+                  placeholder="1–10"
+                />
+              </td>
+              <td className="text-end">
+                <button
+                  className="btn btn-outline-secondary btn-sm w-full md:w-auto"
+                  onClick={() => exportStudentDetailPDF(s.id)}
+                  disabled={!fromDate || !toDate}
+                  title="Descargar PDF de observaciones"
+                >
+                  PDF observaciones
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <small className="text-muted d-block mt-1">Las notas se limitan entre 1 y 10 automáticamente.</small>
+  </div>
+</div>
+
     </>
   );
 }
