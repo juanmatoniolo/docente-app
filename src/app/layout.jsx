@@ -1,6 +1,9 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
 import BootstrapProvider from "./BootstrapProvider";
+import Providers from './providers';
+
+
 
 export const metadata = {
   title: "Docentes App",
@@ -10,11 +13,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es-AR">
-      <body className="bg-light text-dark">
+      <body suppressHydrationWarning className="bg-light text-dark">
         <BootstrapProvider>
-          <div className="container py-3">{children}</div>
+          <Providers>{children}</Providers>
         </BootstrapProvider>
       </body>
     </html>
   );
 }
+

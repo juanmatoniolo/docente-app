@@ -1,8 +1,11 @@
 import React from 'react'
+import StudentsManager from '../../components/StudentsManager'
 
 const page = () => {
   return (
-    <div>page</div>
+  <>
+    <StudentsManager />
+  </>
   )
 }
 

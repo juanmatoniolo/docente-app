@@ -1,8 +1,14 @@
 import React from 'react'
+import SchoolsManager from '../../components/SchoolsManager'
+import CoursesManager from '../../components/CoursesManager'
 
 const page = () => {
   return (
-    <div>page</div>
+    <>
+      <CoursesManager />
+      <br />
+      <SchoolsManager />
+    </>
   )
 }
 

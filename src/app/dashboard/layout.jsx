@@ -103,7 +103,7 @@ export default function DashboardLayout({ children }) {
                     href="/dashboard/cursos"
                     className={`nav-link ${isActive("/dashboard/cursos")}`}
                   >
-                    Cursos
+                    Alumnos
                   </Link>
                 </li>
                 <li className="nav-item">
@@ -114,6 +114,15 @@ export default function DashboardLayout({ children }) {
                     Asistencia
                   </Link>
                 </li>
+                <li className="nav-item">
+                  <Link
+                    href="/dashboard/Cierre"
+                    className={`nav-link ${isActive("/dashboard/Cierre")}`}
+                  >
+                    Cierre de Trimestre
+                  </Link>
+                </li>
+
               </ul>
             </div>
           </aside>

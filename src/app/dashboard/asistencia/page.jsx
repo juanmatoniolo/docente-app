@@ -1,8 +1,11 @@
 import React from 'react'
+import AttendanceManager from '../../components/AttendanceManager'
 
 const page = () => {
   return (
-    <div>page</div>
+    <>
+       <AttendanceManager />
+    </>
   )
 }
 
