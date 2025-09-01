@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { getApps, getApp, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
 import { FaWhatsapp, FaInstagram, FaLinkedin } from "react-icons/fa";
+import { Offcanvas } from "bootstrap";
 
 // Config de Firebase
 const firebaseConfig = {
@@ -29,6 +30,15 @@ function getFirebaseApp() {
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 
+// 👉 Función para cerrar el menú offcanvas
+function closeOffcanvas() {
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar) {
+    const bsOffcanvas = Offcanvas.getInstance(sidebar);
+    if (bsOffcanvas) bsOffcanvas.hide();
+  }
+}
+
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -39,6 +49,7 @@ export default function DashboardLayout({ children }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      closeOffcanvas(); // cerrar menú si está abierto
       router.replace("/");
     } catch (err) {
       console.error("Error cerrando sesión:", err);
@@ -51,7 +62,8 @@ export default function DashboardLayout({ children }) {
     <>
       {/* NAVBAR */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-        <div className="container-fluid">
+        <div className="container-fluid d-flex align-items-center">
+          {/* Botón hamburguesa en mobile */}
           <button
             className="btn btn-outline-light me-2 d-lg-none"
             type="button"
@@ -61,10 +73,16 @@ export default function DashboardLayout({ children }) {
           >
             ☰
           </button>
-          <Link className="navbar-brand fw-semibold" href="/dashboard">
-            Docente: {currentUser?.displayName || "Usuario"}
-          </Link>
-          <div className="ms-auto d-flex align-items-center gap-2">
+
+          {/* Marca centrada en mobile, izquierda en desktop */}
+          <div className="flex-grow-1 text-center text-lg-start">
+            <Link className="navbar-brand fw-semibold" href="/dashboard">
+              Docente: {currentUser?.displayName || "Usuario"}
+            </Link>
+          </div>
+
+          {/* Botón logout solo en desktop */}
+          <div className="d-none d-lg-flex ms-auto">
             <button
               onClick={handleLogout}
               className="btn btn-outline-light btn-sm"
@@ -145,12 +163,13 @@ export default function DashboardLayout({ children }) {
                 aria-label="Close"
               />
             </div>
-            <div className="offcanvas-body">
+            <div className="offcanvas-body d-flex flex-column justify-content-between">
               <ul className="nav nav-pills flex-column gap-1">
                 <li className="nav-item">
                   <Link
                     href="/dashboard"
                     className={`nav-link ${isActive("/dashboard")}`}
+                    onClick={closeOffcanvas}
                   >
                     Panel Docente
                   </Link>
@@ -159,6 +178,7 @@ export default function DashboardLayout({ children }) {
                   <Link
                     href="/dashboard/colegios"
                     className={`nav-link ${isActive("/dashboard/colegios")}`}
+                    onClick={closeOffcanvas}
                   >
                     Colegios
                   </Link>
@@ -167,6 +187,7 @@ export default function DashboardLayout({ children }) {
                   <Link
                     href="/dashboard/cursos"
                     className={`nav-link ${isActive("/dashboard/cursos")}`}
+                    onClick={closeOffcanvas}
                   >
                     Alumnos
                   </Link>
@@ -175,6 +196,7 @@ export default function DashboardLayout({ children }) {
                   <Link
                     href="/dashboard/asistencia"
                     className={`nav-link ${isActive("/dashboard/asistencia")}`}
+                    onClick={closeOffcanvas}
                   >
                     Asistencia
                   </Link>
@@ -183,11 +205,22 @@ export default function DashboardLayout({ children }) {
                   <Link
                     href="/dashboard/Cierre"
                     className={`nav-link ${isActive("/dashboard/Cierre")}`}
+                    onClick={closeOffcanvas}
                   >
                     Cierre de Trimestre
                   </Link>
                 </li>
               </ul>
+
+              {/* Botón logout solo en mobile */}
+              <div className="mt-3">
+                <button
+                  onClick={handleLogout}
+                  className="btn btn-outline-danger w-100"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
             </div>
           </div>
 
@@ -208,13 +241,28 @@ export default function DashboardLayout({ children }) {
               </small>
             </div>
             <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end gap-4">
-              <a href="https://wa.me/543412275598" target="_blank" rel="noopener noreferrer" className="text-white">
+              <a
+                href="https://wa.me/543412275598"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white"
+              >
                 <FaWhatsapp size={26} className="opacity-75 hover-opacity" />
               </a>
-              <a href="https://www.instagram.com/juanmatoniolo/" target="_blank" rel="noopener noreferrer" className="text-white">
+              <a
+                href="https://www.instagram.com/juanmatoniolo/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white"
+              >
                 <FaInstagram size={26} className="opacity-75 hover-opacity" />
               </a>
-              <a href="https://www.linkedin.com/in/juanmatoniolo/" target="_blank" rel="noopener noreferrer" className="text-white">
+              <a
+                href="https://www.linkedin.com/in/juanmatoniolo/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white"
+              >
                 <FaLinkedin size={26} className="opacity-75 hover-opacity" />
               </a>
             </div>

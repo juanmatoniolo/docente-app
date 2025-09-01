@@ -93,3 +93,13 @@ ul {
         margin-bottom: 1.5rem;
     }
 }
+
+
+.social-icon {
+    opacity: 0.75;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.social-icon:hover {
+    opacity: 1 !important;
+}
