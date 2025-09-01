@@ -10,6 +10,8 @@ import {
   saveTermPeriod,
   closeTerm,
   subscribeSchools,
+  saveGradesIntoStudents,
+  listTermsByCourse,
 } from '../lib/rtdb';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,12 +21,32 @@ function clampGrade(v) {
   if (Number.isNaN(n)) return '';
   return Math.max(1, Math.min(10, n));
 }
-
 function within(date, from, to) {
   if (!date) return false;
   if (from && date < from) return false;
   if (to && date > to) return false;
   return true;
+}
+// Normaliza "notes" por si vino mal guardado como objeto { notes: '...' }
+function normalizeNotes(v) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object') return v.notes ?? '';
+  return '';
+}
+// Quita entradas con '' o null/undefined
+function cleanGrades(map) {
+  const out = {};
+  Object.entries(map || {}).forEach(([sid, v]) => {
+    if (v !== '' && v != null) out[sid] = v;
+  });
+  return out;
+}
+// Une notas: primero las persistidas, y encima las del estado (prevalecen)
+function mergedGradesForExport(currentGrades, persistedGrades) {
+  const a = cleanGrades(persistedGrades || {});
+  const b = cleanGrades(currentGrades || {});
+  return { ...a, ...b };
 }
 
 export default function TermClosure() {
@@ -48,34 +70,53 @@ export default function TermClosure() {
   const openConfirm = () => setShowConfirm(true);
   const closeConfirm = () => { if (!closing) setShowConfirm(false); };
 
-  // cargar alumnos
+  // Colegios (para PDF)
+  const [schools, setSchools] = useState({});
+
+  // Historial de cierres
+  const [history, setHistory] = useState({}); // { T1: {...}, T2: {...} }
+
+  // Suscribir colegios
+  useEffect(() => {
+    if (!uid) return;
+    const off = subscribeSchools(uid, setSchools);
+    return () => off && off();
+  }, [uid]);
+
+  // alumnos del curso
   useEffect(() => {
     if (!uid || !sel.courseId) { setStudents({}); return; }
     const off = subscribeStudents(uid, sel.courseId, setStudents);
     return () => off && off();
   }, [uid, sel.courseId]);
 
-  // cargar observaciones + término existente (para precargar período/notas)
+  // observaciones + término elegido (prefill) + historial
   useEffect(() => {
     if (!uid || !sel.courseId) {
       setObservationsAll({});
       setGrades({});
-      setFromDate('');
-      setToDate('');
-      setNotes('');
+      setFromDate(''); setToDate(''); setNotes('');
+      setHistory({});
       return;
     }
     (async () => {
       setLoading(true);
-      const [obs, t] = await Promise.all([
+      const [obs, t, hist] = await Promise.all([
         getObservations(uid, sel.courseId),
         getTerm(uid, sel.courseId, term),
+        listTermsByCourse(uid, sel.courseId),
       ]);
       setObservationsAll(obs || {});
       if (t?.period?.from) setFromDate(t.period.from);
       if (t?.period?.to) setToDate(t.period.to);
-      if (t?.grades) setGrades(t.grades);
-      if (t?.notes) setNotes(t.notes);
+      setGrades(t?.grades || {});
+      setNotes(normalizeNotes(t?.notes));
+      // normalizamos notes en el historial
+      const normalizedHist = {};
+      Object.entries(hist || {}).forEach(([k, v]) => {
+        normalizedHist[k] = { ...v, notes: normalizeNotes(v?.notes) };
+      });
+      setHistory(normalizedHist);
       setLoading(false);
     })();
   }, [uid, sel.courseId, term]);
@@ -108,16 +149,6 @@ export default function TermClosure() {
     setGrades(g => ({ ...g, [sid]: value === '' ? '' : clampGrade(value) }));
   };
 
-
-  const [schools, setSchools] = useState({});
-
-  useEffect(() => {
-    if (!uid) return;
-    const off = subscribeSchools(uid, setSchools);
-    return () => off && off();
-  }, [uid]);
-
-
   // ===== Export: Resumen PDF (alumnos + nota)
   const exportSummaryPDF = async () => {
     if (!sel.courseId) return;
@@ -126,12 +157,15 @@ export default function TermClosure() {
     const mm = (n) => n * 2.83465;
     let y = mm(25);
 
+    // merge de notas: prioriza lo que está en memoria, si no, las persistidas
+    const persisted = history?.[term]?.grades || {};
+    const gradesForPdf = mergedGradesForExport(grades, persisted);
+
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
     doc.text(`Cierre de Trimestre ${term}`, mm(20), y); y += mm(7);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
     const schoolName = schools?.[sel.schoolId]?.name || sel.schoolId || '—';
     doc.text(`Colegio: ${schoolName}`, mm(20), y); y += mm(6);
-
     doc.text(`Período: ${fromDate || '—'} a ${toDate || '—'}`, mm(20), y); y += mm(12);
 
     doc.setFont('helvetica', 'bold'); doc.text('Alumno', mm(20), y);
@@ -140,10 +174,10 @@ export default function TermClosure() {
     doc.setFont('helvetica', 'normal');
 
     for (const s of orderedStudents) {
-      const grade = grades?.[s.id] ?? '';
       const name = `${s.lastName || ''}, ${s.firstName || ''}`.trim();
+      const grade = gradesForPdf[s.id];
       doc.text(name, mm(20), y);
-      doc.text(String(grade || '—'), mm(160), y);
+      doc.text(grade != null ? String(grade) : '—', mm(160), y);
       y += mm(7);
       if (y > mm(280)) { doc.addPage(); y = mm(25); }
     }
@@ -161,10 +195,12 @@ export default function TermClosure() {
     let y = mm(25);
 
     const items = observationsByStudent?.[sid] || [];
+    const schoolName = schools?.[sel.schoolId]?.name || sel.schoolId || '—';
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
     doc.text(`Detalle de Observaciones — ${term}`, mm(20), y); y += mm(9);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text(`Colegio: ${schoolName}`, mm(20), y); y += mm(6);
     doc.text(`Alumno: ${s.lastName || ''}, ${s.firstName || ''}`, mm(20), y); y += mm(6);
     if (s.dni) { doc.text(`DNI: ${s.dni}`, mm(20), y); y += mm(6); }
     doc.text(`Período: ${fromDate || '—'} a ${toDate || '—'}`, mm(20), y); y += mm(10);
@@ -180,7 +216,6 @@ export default function TermClosure() {
       doc.setFont('helvetica', 'normal');
 
       for (const row of items) {
-        // Wrap del texto para no salirse
         const wrapped = doc.splitTextToSize(row.text, mm(130));
         doc.text(row.date, mm(20), y);
         for (const line of wrapped) {
@@ -201,16 +236,32 @@ export default function TermClosure() {
     if (!sel.courseId || !fromDate || !toDate) return;
     try {
       setClosing(true);
-      // guardamos período y notas antes de cerrar
+
+      // limpiar notas vacías antes de persistir
+      const cleaned = cleanGrades(grades);
+
+      // 1) Guardar período
       await saveTermPeriod(uid, sel.courseId, term, { from: fromDate, to: toDate });
-      await saveTermGrades(uid, sel.courseId, term, grades);
-      await closeTerm(uid, sel.courseId, term, { notes });
+      // 2) Guardar notas en el trimestre (solo válidas)
+      await saveTermGrades(uid, sel.courseId, term, cleaned);
+      // 3) Replicar notas dentro de cada alumno (histórico por alumno)
+      await saveGradesIntoStudents(uid, sel.courseId, term, cleaned);
+      // 4) Cerrar trimestre (string, no objeto)
+      await closeTerm(uid, sel.courseId, term, notes);
+      // 5) Resetear inputs de notas
+      setGrades({});
       setClosing(false);
       setShowConfirm(false);
+      // 6) Refrescar historial normalizado
+      const hist = await listTermsByCourse(uid, sel.courseId);
+      const normalizedHist = {};
+      Object.entries(hist || {}).forEach(([k, v]) => {
+        normalizedHist[k] = { ...v, notes: normalizeNotes(v?.notes) };
+      });
+      setHistory(normalizedHist);
     } catch (e) {
       console.error(e);
       setClosing(false);
-      // Podés agregar un pequeño mensaje visual si querés (badge/texto), evitamos alert
     }
   };
 
@@ -227,7 +278,7 @@ export default function TermClosure() {
             </div>
             <div className="col-4">
               <label className="form-label">Trimestre</label>
-              <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value.toUpperCase())}>
+              <select className="form-select" value={term} onChange={(e)=>setTerm(e.target.value.toUpperCase())}>
                 <option value="T1">T1</option>
                 <option value="T2">T2</option>
                 <option value="T3">T3</option>
@@ -235,15 +286,15 @@ export default function TermClosure() {
             </div>
             <div className="col-4">
               <label className="form-label">Desde</label>
-              <input className="form-control" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              <input className="form-control" type="date" value={fromDate} onChange={(e)=>setFromDate(e.target.value)} />
             </div>
             <div className="col-4">
               <label className="form-label">Hasta</label>
-              <input className="form-control" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              <input className="form-control" type="date" value={toDate} onChange={(e)=>setToDate(e.target.value)} />
             </div>
             <div className="col-12">
               <label className="form-label">Notas del cierre (opcional)</label>
-              <input className="form-control" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej.: Observaciones generales del trimestre" />
+              <input className="form-control" value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="Ej.: Observaciones generales del trimestre" />
             </div>
           </div>
 
@@ -318,7 +369,41 @@ export default function TermClosure() {
             </table>
           </div>
 
-          <small className="text-muted">Las notas se limitarán entre 1 y 10 automáticamente.</small>
+          <small className="text-muted d-block">Las notas se limitan entre 1 y 10 automáticamente.</small>
+
+          {/* Historial de cierres */}
+          <hr />
+          <h3 className="h6 mb-2">Cierres guardados</h3>
+          <div className="table-responsive">
+            <table className="table table-sm">
+              <thead>
+                <tr>
+                  <th>Trimestre</th>
+                  <th>Período</th>
+                  <th>Estado</th>
+                  <th>Notas/observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(history).length === 0 && (
+                  <tr><td colSpan="4" className="text-muted">Sin cierres aún.</td></tr>
+                )}
+                {Object.entries(history).map(([tKey, tVal]) => (
+                  <tr key={tKey}>
+                    <td><strong>{tKey}</strong></td>
+                    <td>{tVal?.period?.from || '—'} a {tVal?.period?.to || '—'}</td>
+                    <td>
+                      {tVal?.closed ? <span className="badge bg-success">Cerrado</span> : <span className="badge bg-secondary">Borrador</span>}
+                    </td>
+                    <td className="text-truncate" style={{ maxWidth: 320 }}>
+                      {normalizeNotes(tVal?.notes) || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </div>
 
@@ -341,7 +426,10 @@ export default function TermClosure() {
                   <button type="button" className="btn-close" aria-label="Close" onClick={closeConfirm} disabled={closing} />
                 </div>
                 <div className="modal-body">
-                  <p className="mb-2">Se guardará el <strong>período</strong>, las <strong>notas</strong> y se marcará el trimestre <strong>{term}</strong> como cerrado.</p>
+                  <p className="mb-2">
+                    Se guardará el <strong>período</strong>, las <strong>notas</strong> (también dentro de cada alumno)
+                    y se marcará el trimestre <strong>{term}</strong> como cerrado.
+                  </p>
                   <p className="mb-0">Período: <code>{fromDate || '—'}</code> a <code>{toDate || '—'}</code></p>
                 </div>
                 <div className="modal-footer">

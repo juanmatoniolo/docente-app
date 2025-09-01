@@ -7,7 +7,6 @@ const Cierre = () => {
     return (
         <>
             <TermClosure />
-
         </>
     )
 }

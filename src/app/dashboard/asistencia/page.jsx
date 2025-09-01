@@ -8,7 +8,6 @@ const page = () => {
   return (
     <>
       <Suspense fallback={<div>Cargando asistencia...</div>}>
-
         <AttendanceManager />
       </Suspense>
     </>

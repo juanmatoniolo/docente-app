@@ -17,26 +17,22 @@ export default function AttendanceManager() {
   const { user } = useAuth();
   const uid = user?.uid;
 
-  // Preselección por querystring: /dashboard?tab=attendance&schoolId=...&courseId=...
   const search = useSearchParams();
   const [sel, setSel] = useState({ schoolId: '', courseId: '' });
 
-  // UI / Datos
   const [dateISO, setDateISO] = useState(new Date().toISOString().slice(0, 10));
   const [students, setStudents] = useState({});
-  const [attendance, setAttendance] = useState({});     // { studentId: true|false }
-  const [allAttendance, setAllAttendance] = useState({}); // { 'YYYY-MM-DD': { studentId: bool } }
-  const [observations, setObservations] = useState({}); // { date: { studentId: text } }
+  const [attendance, setAttendance] = useState({});
+  const [allAttendance, setAllAttendance] = useState({});
+  const [observations, setObservations] = useState({});
   const [filter, setFilter] = useState('');
 
-  // Modal: historial de observaciones
   const [showModal, setShowModal] = useState(false);
-  const [modalStudent, setModalStudent] = useState(null); // { id, firstName, lastName }
-  const [rangeFrom, setRangeFrom] = useState(''); // p.ej. 2025-03-01
-  const [rangeTo, setRangeTo] = useState('');     // p.ej. 2025-05-31
+  const [modalStudent, setModalStudent] = useState(null);
+  const [rangeFrom, setRangeFrom] = useState('');
+  const [rangeTo, setRangeTo] = useState('');
 
-  // Para enfoque y shortcuts (espacio alterna presente/ausente)
-  const rowRefs = useRef({}); // {studentId: ref}
+  const rowRefs = useRef({});
 
   // Preselección desde URL
   useEffect(() => {
@@ -46,17 +42,16 @@ export default function AttendanceManager() {
     if (qsTab === 'attendance' && qsSchool) {
       setSel({ schoolId: qsSchool, courseId: qsCourse || '' });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Suscripción de alumnos del curso
+  // Suscripción de alumnos
   useEffect(() => {
     if (!uid || !sel.courseId) { setStudents({}); return; }
     const off = subscribeStudents(uid, sel.courseId, setStudents);
     return () => off && off();
   }, [uid, sel.courseId]);
 
-  // Cargar toda la asistencia y observaciones del curso
+  // Cargar asistencia y observaciones
   useEffect(() => {
     if (!uid || !sel.courseId) { setAllAttendance({}); setObservations({}); return; }
     (async () => {
@@ -67,13 +62,12 @@ export default function AttendanceManager() {
     })();
   }, [uid, sel.courseId]);
 
-  // Cargar asistencia de la fecha actual seleccionada
+  // Asistencia de la fecha seleccionada
   useEffect(() => {
-    const forDate = (allAttendance && allAttendance[dateISO]) || {};
-    setAttendance(forDate);
+    setAttendance(allAttendance[dateISO] || {});
   }, [allAttendance, dateISO]);
 
-  // Orden alfabético + filtro
+  // Orden y filtro
   const orderedStudents = useMemo(() => {
     const list = Object.entries(students)
       .map(([id, s]) => ({ id, ...s }))
@@ -96,7 +90,7 @@ export default function AttendanceManager() {
     [allAttendance, students]
   );
 
-  // ====== Interacciones ======
+  // ===== Interacciones =====
   const togglePresent = (sid) => {
     setAttendance(prev => ({ ...prev, [sid]: !(prev[sid] === true) }));
   };
@@ -118,10 +112,8 @@ export default function AttendanceManager() {
   const handleSave = async () => {
     if (!sel.courseId) return alert('Elegí un curso');
     await saveAttendance(uid, sel.courseId, dateISO, attendance);
-    // refrescamos allAttendance para que el resumen esté al día
     const att = await getAttendanceByCourse(uid, sel.courseId);
     setAllAttendance(att);
-    // feedback suave
     toastFlash('Asistencia guardada ✔');
   };
 
@@ -129,10 +121,12 @@ export default function AttendanceManager() {
     await saveObservation(uid, sel.courseId, dateISO, sid, text);
     const obs = await getObservations(uid, sel.courseId);
     setObservations(obs);
+    // limpiar input
+    const el = document.getElementById(`obs-${sid}`);
+    if (el) el.value = '';
     toastFlash('Observación guardada ✔');
   };
 
-  // Shortcuts: barra espaciadora alterna presente en la fila enfocada
   const onRowKeyDown = (e, sid) => {
     if (e.code === 'Space') {
       e.preventDefault();
@@ -140,10 +134,8 @@ export default function AttendanceManager() {
     }
   };
 
-  // Historial de observaciones por alumno (por rango)
   const openHistory = (student) => {
     setModalStudent(student);
-    // Sugerimos un rango por defecto: últimos 90 días
     const today = new Date();
     const from = new Date(today); from.setDate(from.getDate() - 90);
     setRangeFrom(toISO(from));
@@ -162,18 +154,15 @@ export default function AttendanceManager() {
     const from = rangeFrom || '0000-01-01';
     const to = rangeTo || '9999-12-31';
     const rows = [];
-    // observations: { dateISO: { studentId: text } }
     Object.entries(observations || {}).forEach(([date, perStudent]) => {
       const t = perStudent?.[sid];
       if (!t || typeof t !== 'string' || !t.trim()) return;
       if (date >= from && date <= to) rows.push({ date, text: t.trim() });
     });
-    // ordenar por fecha desc
     rows.sort((a, b) => (a.date < b.date ? 1 : -1));
     return rows;
   };
 
-  // Helper pequeño para feedback inline
   const toastFlash = (msg) => {
     const el = document.getElementById('att-toast');
     if (!el) return;
@@ -182,7 +171,6 @@ export default function AttendanceManager() {
     setTimeout(() => { el.style.opacity = '0'; }, 1400);
   };
 
-  // Utils
   function toISO(d) {
     const y = d.getFullYear();
     const m = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -204,10 +192,8 @@ export default function AttendanceManager() {
             />
           </div>
 
-          {/* Selector de curso */}
           <SelectSchoolCourse value={sel} onChange={setSel} />
 
-          {/* Fecha + acciones rápidas */}
           <div className="row g-3 mt-3 align-items-end">
             <div className="col-auto">
               <label className="form-label mb-1">Fecha</label>
@@ -220,15 +206,9 @@ export default function AttendanceManager() {
             </div>
 
             <div className="col-12 col-md d-flex flex-wrap gap-2">
-              <button className="btn btn-outline-success" onClick={() => setAll(true)}>
-                Marcar todos
-              </button>
-              <button className="btn btn-outline-secondary" onClick={() => setAll(false)}>
-                Marcar nadie
-              </button>
-              <button className="btn btn-outline-warning" onClick={invertAll}>
-                Invertir
-              </button>
+              <button className="btn btn-outline-success" onClick={() => setAll(true)}>Marcar todos</button>
+              <button className="btn btn-outline-secondary" onClick={() => setAll(false)}>Marcar nadie</button>
+              <button className="btn btn-outline-warning" onClick={invertAll}>Invertir</button>
             </div>
 
             <div className="col-12 col-md-4">
@@ -242,9 +222,8 @@ export default function AttendanceManager() {
             </div>
           </div>
 
-          {/* Lista de alumnos */}
           <div className="table-responsive mt-3">
-            <table className="table align-middle">
+            <table className="table align-middle table-sm">
               <thead>
                 <tr>
                   <th style={{ minWidth: 220 }}>Alumno</th>
@@ -266,7 +245,6 @@ export default function AttendanceManager() {
                       ref={(el) => { rowRefs.current[sid] = el; }}
                       onKeyDown={(e) => onRowKeyDown(e, sid)}
                       onClick={(e) => {
-                        // Evitar toggle si el click fue en un control dentro de la fila
                         const tag = (e.target.tagName || '').toLowerCase();
                         if (['input', 'button', 'textarea', 'label', 'svg', 'path'].includes(tag)) return;
                         togglePresent(sid);
@@ -274,35 +252,29 @@ export default function AttendanceManager() {
                       className="user-select-none"
                       style={{ cursor: 'pointer' }}
                     >
-                      <td>
+                      <td data-label="Alumno">
                         <div className="fw-medium">{s.lastName}, {s.firstName}</div>
-                        {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
+                        {s.dni && <small className="text-muted d-block">DNI: {s.dni}</small>}
                       </td>
 
-                      <td className="text-center">
-                        <div className="btn-group" role="group" aria-label="Presente/Ausente">
+                      <td className="text-center" data-label="Presente">
+                        <div className="btn-group mb-2 mb-md-0" role="group">
                           <button
                             type="button"
-                            className={`btn ${isPresent ? 'btn-success' : 'btn-outline-success'}`}
+                            className={`btn btn-sm ${isPresent ? 'btn-success' : 'btn-outline-success'}`}
                             onClick={() => setAttendance(prev => ({ ...prev, [sid]: true }))}
-                            title="Presente"
-                          >
-                            Presente
-                          </button>
+                          >Presente</button>
                           <button
                             type="button"
-                            className={`btn ${!isPresent ? 'btn-danger' : 'btn-outline-danger'}`}
+                            className={`btn btn-sm ${!isPresent ? 'btn-danger' : 'btn-outline-danger'}`}
                             onClick={() => setAttendance(prev => ({ ...prev, [sid]: false }))}
-                            title="Ausente"
-                          >
-                            Ausente
-                          </button>
+                          >Ausente</button>
                         </div>
                         <div className="form-text">Tip: barra espaciadora alterna</div>
                       </td>
 
-                      <td>
-                        <div className="input-group">
+                      <td data-label="Observación">
+                        <div className="input-group input-group-sm">
                           <input
                             className="form-control"
                             defaultValue={obsText}
@@ -312,26 +284,17 @@ export default function AttendanceManager() {
                           />
                           <button
                             className="btn btn-outline-secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const el = document.getElementById(`obs-${sid}`);
-                              handleSaveObs(sid, el?.value || '');
-                            }}
-                          >
-                            Guardar
-                          </button>
+                            onClick={(e) => { e.stopPropagation(); handleSaveObs(sid, document.getElementById(`obs-${sid}`)?.value || ''); }}
+                          >Guardar</button>
                         </div>
                       </td>
 
-                      <td className="text-end">
+                      <td className="text-end" data-label="Historial">
                         <button
                           type="button"
                           className="btn btn-outline-primary btn-sm"
                           onClick={(e) => { e.stopPropagation(); openHistory(s); }}
-                          title="Ver historial de observaciones"
-                        >
-                          Historial
-                        </button>
+                        >Historial</button>
                       </td>
                     </tr>
                   );
@@ -347,12 +310,9 @@ export default function AttendanceManager() {
             </div>
           </div>
 
-          {/* Resumen */}
           <div className="mt-4">
             <h3 className="h6">Resumen del curso</h3>
-            <p className="text-muted mb-2">
-              Clases dadas: <strong>{summary.totalClasses}</strong>
-            </p>
+            <p className="text-muted mb-2">Clases dadas: <strong>{summary.totalClasses}</strong></p>
             <div className="table-responsive">
               <table className="table table-sm align-middle">
                 <thead>
@@ -385,7 +345,7 @@ export default function AttendanceManager() {
         </div>
       </div>
 
-      {/* Modal: Historial de observaciones por alumno */}
+      {/* Modal */}
       {showModal && (
         <>
           <div className="modal-backdrop fade show" onClick={closeHistory} style={{ zIndex: 1040 }} />
@@ -398,7 +358,6 @@ export default function AttendanceManager() {
                   </h5>
                   <button type="button" className="btn-close" aria-label="Close" onClick={closeHistory} />
                 </div>
-
                 <div className="modal-body">
                   <div className="row g-2 align-items-end">
                     <div className="col-auto">
@@ -410,7 +369,6 @@ export default function AttendanceManager() {
                       <input className="form-control" type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
                     </div>
                   </div>
-
                   <div className="table-responsive mt-3">
                     <table className="table table-sm">
                       <thead>
@@ -433,11 +391,8 @@ export default function AttendanceManager() {
                     </table>
                   </div>
                 </div>
-
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-outline-secondary" onClick={closeHistory}>
-                    Cerrar
-                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={closeHistory}>Cerrar</button>
                 </div>
               </div>
             </div>

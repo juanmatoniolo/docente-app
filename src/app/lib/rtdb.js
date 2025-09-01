@@ -233,3 +233,25 @@ export async function saveTermPeriod(uid, courseId, term, period) {
 		updatedAt: serverTimestamp(),
 	});
 }
+
+// Guarda las notas también dentro de cada alumno, bajo students/{courseId}/{studentId}/terms/{term}
+export async function saveGradesIntoStudents(uid, courseId, term, gradesMap) {
+	const base = `teachers/${uid}`;
+	const updates = {};
+	for (const [sid, grade] of Object.entries(gradesMap || {})) {
+		if (grade === "" || grade == null) continue; // ignorar vacíos
+		updates[`${base}/students/${courseId}/${sid}/terms/${term}/grade`] =
+			grade;
+		updates[`${base}/students/${courseId}/${sid}/terms/${term}/updatedAt`] =
+			serverTimestamp();
+	}
+	if (Object.keys(updates).length > 0) {
+		await update(ref(db), updates);
+	}
+}
+
+// Devuelve todos los cierres/terminos de un curso: { T1: {...}, T2: {...}, ... }
+export async function listTermsByCourse(uid, courseId) {
+	const snap = await get(ref(db, `teachers/${uid}/terms/${courseId}`));
+	return snap.val() || {};
+}

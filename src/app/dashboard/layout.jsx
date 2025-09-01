@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { getApps, getApp, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
+// Footer.jsx
+import { FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
 
 // Config de Firebase (igual que en page.jsx)
 const firebaseConfig = {
@@ -192,6 +194,43 @@ export default function DashboardLayout({ children }) {
             <div className="container">{children}</div>
           </main>
         </div>
+
+
+<footer className="bg-gray-800 text-white py-6 mt-10">
+      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
+        <p className="text-sm mb-4 md:mb-0">
+          © {new Date().getFullYear()} Juanma Toniolo. Todos los derechos reservados.
+        </p>
+        <div className="flex space-x-6">
+          <a
+            href="https://wa.me/543412275598"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-green-500 transition-colors"
+          >
+            <FaWhatsapp size={24} />
+          </a>
+          <a
+            href="https://www.instagram.com/juanmatoniolo/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-pink-500 transition-colors"
+          >
+            <FaInstagram size={24} />
+          </a>
+          <a
+            href="https://www.linkedin.com/in/juanmatoniolo/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-blue-500 transition-colors"
+          >
+            <FaLinkedin size={24} />
+          </a>
+        </div>
+      </div>
+    </footer>
+
+
       </div>
     </>
   );
