@@ -1,17 +1,8 @@
-"use client";
+"use client"; // IMPORTANTE: debe estar en la primera línea
 
-import dynamic from 'next/dynamic';
+import TermClosure from '../../components/TermClosure';
 import React from 'react';
 
-// Importamos TermClosure dinámicamente solo en cliente
-const TermClosure = dynamic(() => import('../../components/TermClosure'), {
-    ssr: false
-});
-
 export default function Cierre() {
-    return (
-        <div>
-            <TermClosure />
-        </div>
-    );
+    return <TermClosure />;
 }
