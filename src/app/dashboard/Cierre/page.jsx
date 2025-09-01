@@ -1,14 +1,10 @@
-"use client";
+// pages/dashboard/Cierre/page.js
+import dynamic from 'next/dynamic';
 
-import TermClosure from '../../components/TermClosure'
-import React from 'react'
+const TermClosure = dynamic(() => import('../../components/TermClosure'), {
+  ssr: false
+});
 
-const Cierre = () => {
-    return (
-        <>
-            <TermClosure />
-        </>
-    )
+export default function Cierre() {
+  return <TermClosure />;
 }
-
-export default Cierre
