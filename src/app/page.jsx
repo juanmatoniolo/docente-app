@@ -4,6 +4,29 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <main className="w-100">
+
+
+      {/* HEADER simple */}
+      <header className="bg-white shadow-sm border-bottom">
+        <div className="container d-flex justify-content-between align-items-center py-3">
+
+          <Link href="/" className="fw-bold text-primary  fs-5 text-decoration-none">
+            <img src="/logo-bluee.png" alt="Docentes App" height="60" />
+            <img src="/docentes-app.png" alt="Docentes app" height={60} />
+          </Link>
+
+
+          {/* Botón Entrar */}
+          <div className="d-flex gap-2">
+            <Link
+              href="/login"
+              className="btn btn-outline-primary btn-sm px-3"
+            >
+              Entrar
+            </Link>
+          </div>
+        </div>
+      </header>
       {/* Hero */}
       <section className="bg-primary text-white w-100 py-5 section-hero">
         <div className="container-fluid text-center">

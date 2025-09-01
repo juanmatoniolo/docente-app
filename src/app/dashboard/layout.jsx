@@ -231,49 +231,6 @@ export default function DashboardLayout({ children }) {
         </div>
       </div>
 
-      {/* FOOTER responsivo */}
-      <footer className="bg-primary text-white mt-auto py-3">
-        <div className="container">
-          <div className="row align-items-center">
-            <div className="col-12 col-md-6 text-center text-md-start mb-3 mb-md-0">
-              <small className="fw-light">
-                © {new Date().getFullYear()} <strong>Juanma Toniolo</strong>. Todos los derechos reservados.
-              </small>
-            </div>
-            <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end gap-4">
-              <a
-                href="https://wa.me/543412275598"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white"
-              >
-                <FaWhatsapp size={26} className="opacity-75 hover-opacity" />
-              </a>
-              <a
-                href="https://www.instagram.com/juanmatoniolo/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white"
-              >
-                <FaInstagram size={26} className="opacity-75 hover-opacity" />
-              </a>
-              <a
-                href="https://www.linkedin.com/in/juanmatoniolo/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white"
-              >
-                <FaLinkedin size={26} className="opacity-75 hover-opacity" />
-              </a>
-            </div>
-          </div>
-        </div>
-        <style jsx>{`
-          .hover-opacity:hover {
-            opacity: 1 !important;
-          }
-        `}</style>
-      </footer>
     </>
   );
 }

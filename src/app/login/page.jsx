@@ -9,6 +9,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
 } from 'firebase/auth';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,51 +63,76 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="container py-5">
-      <div className="row justify-content-center">
-        <div className="col-12 col-sm-10 col-md-6 col-lg-4">
-          <div className="card shadow-sm border-0">
-            <div className="card-body p-4">
-              <h1 className="h4 mb-4 text-center fw-bold">Ingresar</h1>
+    <>
+      {/* HEADER simple */}
+      <header className="bg-white shadow-sm border-bottom">
+        <div className="container d-flex justify-content-between align-items-center py-3">
 
-              {/* Botón Google */}
-              <button
-                onClick={loginWithGoogle}
-                disabled={loading}
-                className="btn btn-light border d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded shadow-sm google-btn"
-              >
-                <img
-                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                  alt="Google logo"
-                  width={22}
-                  height={22}
-                />
-                <span className="fw-medium">
-                  {loading ? 'Conectando…' : 'Continuar con Google'}
-                </span>
-              </button>
+          <Link href="/" className="fw-bold text-primary  fs-5 text-decoration-none">
+            <img src="/logo-bluee.png" alt="Docentes App" height="60" />
+            <img src="/docentes-app.png" alt="Docentes app" height={60} />
+          </Link>
 
-              {/* Error */}
-              {error && (
-                <div
-                  className="alert alert-danger mt-3 mb-0 small text-center"
-                  role="alert"
+
+          {/* Botón Entrar */}
+          <div className="d-flex gap-2">
+            <Link
+              href="/login"
+              className="btn btn-outline-primary btn-sm px-3"
+            >
+              Entrar
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="container py-5" style={{height:'70vh'}} >
+
+        <div className="row justify-content-center">
+          <div className="col-12 col-sm-10 col-md-6 col-lg-4">
+            <div className="card shadow-sm border-0">
+              <div className="card-body p-4">
+                <h1 className="h4 mb-4 text-center fw-bold">Ingresar</h1>
+
+                {/* Botón Google */}
+                <button
+                  onClick={loginWithGoogle}
+                  disabled={loading}
+                  className="btn btn-light border d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded shadow-sm google-btn"
                 >
-                  {error}
-                </div>
-              )}
+                  <img
+                    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                    alt="Google logo"
+                    width={22}
+                    height={22}
+                  />
+                  <span className="fw-medium">
+                    {loading ? 'Conectando…' : 'Continuar con Google'}
+                  </span>
+                </button>
+
+                {/* Error */}
+                {error && (
+                  <div
+                    className="alert alert-danger mt-3 mb-0 small text-center"
+                    role="alert"
+                  >
+                    {error}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Estilos específicos */}
-      <style jsx>{`
+        {/* Estilos específicos */}
+        <style jsx>{`
         .google-btn:hover {
           background-color: #f8f9fa;
           border-color: #dadce0;
         }
-      `}</style>
-    </main>
+        `}</style>
+      </main>
+    </>
   );
 }
