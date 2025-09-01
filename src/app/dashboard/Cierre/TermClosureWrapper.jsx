@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Obligatorio: todo lo que use document/window debe ser client
 
 import React from "react";
 import TermClosure from "../../../components/TermClosure";

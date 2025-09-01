@@ -153,6 +153,7 @@ export default function TermClosure() {
   const exportSummaryPDF = async () => {
     if (!sel.courseId) return;
     const jsPDF = (await import('jspdf')).default;
+
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const mm = (n) => n * 2.83465;
     let y = mm(25);
@@ -267,133 +268,133 @@ export default function TermClosure() {
 
   return (
     <><div className="card shadow-sm">
-  <div className="card-body">
-    <h2 className="h6 mb-3">Cierre de Trimestre</h2>
+      <div className="card-body">
+        <h2 className="h6 mb-3">Cierre de Trimestre</h2>
 
-    {/* Filtros mobile-first */}
-    <div className="flex flex-col md:flex-row md:gap-2 gap-2 mb-3">
-      <div className="flex-1">
-        <SelectSchoolCourse value={sel} onChange={setSel} />
-      </div>
-      <div className="flex flex-wrap gap-2 w-full md:w-auto">
-        <div className="flex-1 min-w-[100px]">
-          <label className="form-label">Trimestre</label>
-          <select
-            className="form-select w-full"
-            value={term}
-            onChange={(e)=>setTerm(e.target.value.toUpperCase())}
+        {/* Filtros mobile-first */}
+        <div className="flex flex-col md:flex-row md:gap-2 gap-2 mb-3">
+          <div className="flex-1">
+            <SelectSchoolCourse value={sel} onChange={setSel} />
+          </div>
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <div className="flex-1 min-w-[100px]">
+              <label className="form-label">Trimestre</label>
+              <select
+                className="form-select w-full"
+                value={term}
+                onChange={(e) => setTerm(e.target.value.toUpperCase())}
+              >
+                <option value="T1">T1</option>
+                <option value="T2">T2</option>
+                <option value="T3">T3</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[120px]">
+              <label className="form-label">Desde</label>
+              <input
+                type="date"
+                className="form-control w-full"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 min-w-[120px]">
+              <label className="form-label">Hasta</label>
+              <input
+                type="date"
+                className="form-control w-full"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="w-full mt-2">
+            <label className="form-label">Notas del cierre (opcional)</label>
+            <input
+              className="form-control w-full"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ej.: Observaciones generales del trimestre"
+            />
+          </div>
+        </div>
+
+        {/* Botones */}
+        <div className="flex flex-col md:flex-row gap-2 mt-3">
+          <button
+            className="btn btn-outline-primary w-full md:w-auto"
+            onClick={exportSummaryPDF}
+            disabled={!sel.courseId || !fromDate || !toDate || loading}
           >
-            <option value="T1">T1</option>
-            <option value="T2">T2</option>
-            <option value="T3">T3</option>
-          </select>
+            Descargar resumen PDF
+          </button>
+          <button
+            className="btn btn-dark w-full md:w-auto md:ml-auto"
+            onClick={openConfirm}
+            disabled={!sel.courseId || !fromDate || !toDate || loading}
+            title="Guardar período, notas y cerrar"
+          >
+            Cerrar trimestre
+          </button>
         </div>
-        <div className="flex-1 min-w-[120px]">
-          <label className="form-label">Desde</label>
-          <input
-            type="date"
-            className="form-control w-full"
-            value={fromDate}
-            onChange={(e)=>setFromDate(e.target.value)}
-          />
+
+        {/* Tabla responsive */}
+        <div className="overflow-x-auto mt-3">
+          <table className="table table-sm w-full text-sm align-middle">
+            <thead className="bg-gray-100">
+              <tr>
+                <th>Alumno</th>
+                <th style={{ minWidth: 80 }}>Nota</th>
+                <th className="text-end" style={{ minWidth: 120 }}>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orderedStudents.length === 0 && (
+                <tr>
+                  <td colSpan="3">{loading ? 'Cargando…' : 'Elegí un curso'}</td>
+                </tr>
+              )}
+              {orderedStudents.map((s) => (
+                <tr key={s.id}>
+                  <td>
+                    <div className="fw-medium">{s.lastName}, {s.firstName}</div>
+                    {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={10}
+                      className="form-control form-control-sm w-full"
+                      value={grades?.[s.id] ?? ''}
+                      onChange={(e) => onChangeGrade(s.id, e.target.value)}
+                      onBlur={(e) => {
+                        const v = clampGrade(e.target.value);
+                        setGrades(g => ({ ...g, [s.id]: v === '' ? '' : v }));
+                      }}
+                      placeholder="1–10"
+                    />
+                  </td>
+                  <td className="text-end">
+                    <button
+                      className="btn btn-outline-secondary btn-sm w-full md:w-auto"
+                      onClick={() => exportStudentDetailPDF(s.id)}
+                      disabled={!fromDate || !toDate}
+                      title="Descargar PDF de observaciones"
+                    >
+                      PDF observaciones
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="flex-1 min-w-[120px]">
-          <label className="form-label">Hasta</label>
-          <input
-            type="date"
-            className="form-control w-full"
-            value={toDate}
-            onChange={(e)=>setToDate(e.target.value)}
-          />
-        </div>
+
+        <small className="text-muted d-block mt-1">Las notas se limitan entre 1 y 10 automáticamente.</small>
       </div>
-      <div className="w-full mt-2">
-        <label className="form-label">Notas del cierre (opcional)</label>
-        <input
-          className="form-control w-full"
-          value={notes}
-          onChange={(e)=>setNotes(e.target.value)}
-          placeholder="Ej.: Observaciones generales del trimestre"
-        />
-      </div>
     </div>
-
-    {/* Botones */}
-    <div className="flex flex-col md:flex-row gap-2 mt-3">
-      <button
-        className="btn btn-outline-primary w-full md:w-auto"
-        onClick={exportSummaryPDF}
-        disabled={!sel.courseId || !fromDate || !toDate || loading}
-      >
-        Descargar resumen PDF
-      </button>
-      <button
-        className="btn btn-dark w-full md:w-auto md:ml-auto"
-        onClick={openConfirm}
-        disabled={!sel.courseId || !fromDate || !toDate || loading}
-        title="Guardar período, notas y cerrar"
-      >
-        Cerrar trimestre
-      </button>
-    </div>
-
-    {/* Tabla responsive */}
-    <div className="overflow-x-auto mt-3">
-      <table className="table table-sm w-full text-sm align-middle">
-        <thead className="bg-gray-100">
-          <tr>
-            <th>Alumno</th>
-            <th style={{ minWidth: 80 }}>Nota</th>
-            <th className="text-end" style={{ minWidth: 120 }}>Detalle</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orderedStudents.length === 0 && (
-            <tr>
-              <td colSpan="3">{loading ? 'Cargando…' : 'Elegí un curso'}</td>
-            </tr>
-          )}
-          {orderedStudents.map((s) => (
-            <tr key={s.id}>
-              <td>
-                <div className="fw-medium">{s.lastName}, {s.firstName}</div>
-                {s.dni && <small className="text-muted">DNI: {s.dni}</small>}
-              </td>
-              <td>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={10}
-                  className="form-control form-control-sm w-full"
-                  value={grades?.[s.id] ?? ''}
-                  onChange={(e) => onChangeGrade(s.id, e.target.value)}
-                  onBlur={(e) => {
-                    const v = clampGrade(e.target.value);
-                    setGrades(g => ({ ...g, [s.id]: v === '' ? '' : v }));
-                  }}
-                  placeholder="1–10"
-                />
-              </td>
-              <td className="text-end">
-                <button
-                  className="btn btn-outline-secondary btn-sm w-full md:w-auto"
-                  onClick={() => exportStudentDetailPDF(s.id)}
-                  disabled={!fromDate || !toDate}
-                  title="Descargar PDF de observaciones"
-                >
-                  PDF observaciones
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-
-    <small className="text-muted d-block mt-1">Las notas se limitan entre 1 y 10 automáticamente.</small>
-  </div>
-</div>
 
     </>
   );
