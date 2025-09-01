@@ -1,8 +1,12 @@
-"use client"; // IMPORTANTE: debe estar en la primera línea
+"use client"; // obligatorio para App Router client component
 
-import TermClosure from '../../components/TermClosure';
-import React from 'react';
+import React, { Suspense } from "react";
+import TermClosure from "../../components/TermClosure";
 
 export default function Cierre() {
-    return <TermClosure />;
+    return (
+        <Suspense fallback={<div>Cargando…</div>}>
+            <TermClosure />
+        </Suspense>
+    );
 }
