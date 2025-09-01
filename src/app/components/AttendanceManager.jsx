@@ -32,7 +32,9 @@ export default function AttendanceManager() {
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
 
-  const rowRefs = useRef({});
+  // Refs
+  const obsRefs = useRef({}); // { [studentId]: HTMLInputElement | null }
+  const toastRef = useRef(null);
 
   // Preselección desde URL
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function AttendanceManager() {
     if (qsTab === 'attendance' && qsSchool) {
       setSel({ schoolId: qsSchool, courseId: qsCourse || '' });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Suscripción de alumnos
@@ -91,10 +94,6 @@ export default function AttendanceManager() {
   );
 
   // ===== Interacciones =====
-  const togglePresent = (sid) => {
-    setAttendance(prev => ({ ...prev, [sid]: !(prev[sid] === true) }));
-  };
-
   const setAll = (value) => {
     const map = {};
     Object.keys(students).forEach(sid => { map[sid] = value; });
@@ -121,8 +120,10 @@ export default function AttendanceManager() {
     await saveObservation(uid, sel.courseId, dateISO, sid, text);
     const obs = await getObservations(uid, sel.courseId);
     setObservations(obs);
-    const el = document.getElementById(`obs-${sid}`);
-    if (el) el.value = '';
+    // limpiar input usando ref
+    if (obsRefs.current[sid]) {
+      obsRefs.current[sid].value = '';
+    }
     toastFlash('Observación guardada ✔');
   };
 
@@ -156,11 +157,11 @@ export default function AttendanceManager() {
   };
 
   const toastFlash = (msg) => {
-    const el = document.getElementById('att-toast');
+    const el = toastRef.current;
     if (!el) return;
     el.textContent = msg;
     el.style.opacity = '1';
-    setTimeout(() => { el.style.opacity = '0'; }, 1400);
+    setTimeout(() => { if (toastRef.current) toastRef.current.style.opacity = '0'; }, 1400);
   };
 
   function toISO(d) {
@@ -177,6 +178,7 @@ export default function AttendanceManager() {
           <div className="d-flex align-items-center justify-content-between mb-3">
             <h2 className="h6 mb-0">Asistencia</h2>
             <div
+              ref={toastRef}
               id="att-toast"
               className="small text-success"
               style={{ transition: 'opacity 250ms', opacity: 0 }}
@@ -244,6 +246,7 @@ export default function AttendanceManager() {
                     </div>
                     <div className="input-group input-group-sm mt-2">
                       <input
+                        ref={(el) => { obsRefs.current[sid] = el; }}
                         className="form-control"
                         defaultValue={obsText}
                         placeholder="Observación..."
@@ -251,7 +254,7 @@ export default function AttendanceManager() {
                       />
                       <button
                         className="btn btn-outline-secondary"
-                        onClick={() => handleSaveObs(sid, document.getElementById(`obs-${sid}`)?.value || '')}
+                        onClick={() => handleSaveObs(sid, obsRefs.current[sid]?.value || '')}
                       >
                         ✔
                       </button>
@@ -310,6 +313,7 @@ export default function AttendanceManager() {
                         <td>
                           <div className="input-group input-group-sm">
                             <input
+                              ref={(el) => { obsRefs.current[sid] = el; }}
                               className="form-control"
                               defaultValue={obsText}
                               placeholder="Observación..."
@@ -317,7 +321,7 @@ export default function AttendanceManager() {
                             />
                             <button
                               className="btn btn-outline-secondary"
-                              onClick={() => handleSaveObs(sid, document.getElementById(`obs-${sid}`)?.value || '')}
+                              onClick={() => handleSaveObs(sid, obsRefs.current[sid]?.value || '')}
                             >Guardar</button>
                           </div>
                         </td>
