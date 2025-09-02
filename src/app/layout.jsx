@@ -18,7 +18,8 @@ export const metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
-  themeColor: "#0d6efd",
+	"background_color": "#0d6efd",
+	"theme_color": "#fff",
   openGraph: {
     title: "Docentes App",
     description: "Plataforma para gestión de colegios, cursos y asistencia",

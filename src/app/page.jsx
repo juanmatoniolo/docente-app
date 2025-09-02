@@ -1,5 +1,6 @@
 // app/page.jsx
 import Link from "next/link";
+import InstallButton from "./components/InstallButton";
 // o bootstrap.bundle.min.js
 
 export default function HomePage() {
@@ -16,7 +17,7 @@ export default function HomePage() {
             <img src="/docentes-app.png" alt="Docentes app" height={60} />
           </Link>
 
-
+          <InstallButton />
           {/* Botón Entrar */}
           <div className="d-flex gap-2">
             <Link
