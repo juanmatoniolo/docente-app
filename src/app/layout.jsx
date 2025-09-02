@@ -16,19 +16,30 @@ export const metadata = {
   icons: {
     icon: "/favicon.ico",
     shortcut: "/icon-192x192.png",
-    apple: "/apple-touch-icon.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/manifest.json",
-  // Usa themeColor (no "theme_color")
+
+  // Soporte para iOS (Standalone mode + barra de estado)
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default", // "black" o "black-translucent" según tu estilo
+    title: "Docentes App",
+  },
+
+  // Colores para navegadores modernos
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fff" },
     { media: "(prefers-color-scheme: dark)", color: "#0d6efd" },
   ],
+
   viewport: {
     width: "device-width",
     initialScale: 1,
     viewportFit: "cover",
   },
+
+  // Open Graph para compartir en redes
   openGraph: {
     title: "Docentes App",
     description: "Plataforma para gestión de colegios, cursos y asistencia",
@@ -45,6 +56,8 @@ export const metadata = {
     locale: "es_AR",
     type: "website",
   },
+
+  // Twitter Cards
   twitter: {
     card: "summary_large_image",
     title: "Docentes App",
@@ -57,7 +70,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es-AR">
-      <body suppressHydrationWarning className="bg-light text-dark d-flex flex-column min-vh-100">
+      <body
+        suppressHydrationWarning
+        className="bg-light text-dark d-flex flex-column min-vh-100"
+      >
+        {/* Contenido principal */}
         <main className="flex-grow-1 d-flex align-items-center justify-content-center">
           <section className="w-100">
             <BootstrapProvider>
@@ -66,22 +83,43 @@ export default function RootLayout({ children }) {
           </section>
         </main>
 
-        <footer className="bg-primary text-white mt-auto py-3" style={{ height: "6em" }}>
+        {/* Footer */}
+        <footer
+          className="bg-primary text-white mt-auto py-3"
+          style={{ height: "6em" }}
+        >
           <div className="container">
             <div className="row align-items-center">
               <div className="col-12 col-md-6 text-center text-md-start mb-3 mb-md-0">
                 <small className="fw-light">
-                  © {new Date().getFullYear()} <strong>Juanma Toniolo</strong>. Todos los derechos reservados.
+                  © {new Date().getFullYear()}{" "}
+                  <strong>Juanma Toniolo</strong>. Todos los derechos
+                  reservados.
                 </small>
               </div>
               <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end gap-4">
-                <a href="https://wa.me/543412275598" target="_blank" rel="noopener noreferrer" className="text-white social-icon">
+                <a
+                  href="https://wa.me/543412275598"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white social-icon"
+                >
                   <FaWhatsapp size={24} />
                 </a>
-                <a href="https://www.instagram.com/juanmatoniolo/" target="_blank" rel="noopener noreferrer" className="text-white social-icon">
+                <a
+                  href="https://www.instagram.com/juanmatoniolo/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white social-icon"
+                >
                   <FaInstagram size={24} />
                 </a>
-                <a href="https://www.linkedin.com/in/juanmatoniolo/" target="_blank" rel="noopener noreferrer" className="text-white social-icon">
+                <a
+                  href="https://www.linkedin.com/in/juanmatoniolo/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white social-icon"
+                >
                   <FaLinkedin size={24} />
                 </a>
               </div>

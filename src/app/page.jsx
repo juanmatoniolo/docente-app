@@ -1,41 +1,34 @@
 // app/page.jsx
 import Link from "next/link";
 import InstallButton from "./components/InstallButton";
-// o bootstrap.bundle.min.js
+import IosInstallHint from "./components/IosInstallHint";
 
 export default function HomePage() {
   return (
     <main className="w-100">
-
-
       {/* HEADER simple */}
       <header className="bg-white shadow-sm border-bottom">
         <div className="container d-flex justify-content-between align-items-center py-3">
-
-          <Link href="/" className="fw-bold text-primary  fs-5 text-decoration-none">
+          <Link href="/" className="fw-bold text-primary fs-5 text-decoration-none d-flex align-items-center gap-2">
             <img src="/logo-bluee.png" alt="Docentes App" height="60" />
             <img src="/docentes-app.png" alt="Docentes app" height={60} />
           </Link>
 
-          <InstallButton />
           {/* Botón Entrar */}
           <div className="d-flex gap-2">
-            <Link
-              href="/login"
-              className="btn btn-outline-primary btn-sm px-3"
-            >
+            <Link href="/login" className="btn btn-outline-primary btn-sm px-3">
               Entrar
             </Link>
           </div>
         </div>
       </header>
+
       {/* Hero */}
       <section className="bg-primary text-white w-100 py-5 section-hero">
         <div className="container-fluid text-center">
           <h1 className="display-5 fw-bold">Bienvenido a Docentes App</h1>
           <p className="lead mt-3 mb-4">
-            Organiza tus colegios, cursos, alumnos y asistencia de manera simple
-            y rápida.
+            Organiza tus colegios, cursos, alumnos y asistencia de manera simple y rápida.
           </p>
           <Link href="/login" className="btn btn-light btn-lg px-4">
             Comenzar ahora
@@ -43,8 +36,69 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* DESCARGA / INSTALACIÓN (Android + iOS) */}
+      <section className="py-5 bg-white border-bottom">
+        <div className="container">
+          <div className="text-center mb-5">
+            <span className="badge bg-primary-subtle text-primary border border-primary">
+              Instalación
+            </span>
+            <h2 className="mt-3 fw-semibold">Descargá la app en tu teléfono</h2>
+            <p className="text-muted mb-0">
+              Instalación rápida como <strong>PWA</strong> para acceso directo desde tu pantalla de inicio.
+            </p>
+          </div>
 
+          <div className="row g-4">
+            {/* Card Android */}
+            <div className="col-12 col-lg-6">
+              <div className="card h-100 shadow-sm border-0">
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <span className="badge bg-success">Android</span>
+                    <h5 className="card-title fw-bold mb-0">Instalar en Android</h5>
+                  </div>
+                  <p className="card-text text-muted">
+                    Si tu navegador lo permite, vas a ver el botón para instalar la app. Se agregará como acceso
+                    directo a tu pantalla de inicio.
+                  </p>
 
+                  {/* Botón dinámico: solo aparece cuando el navegador emite beforeinstallprompt */}
+                  <div className="d-flex align-items-center gap-2">
+                    <InstallButton />
+                    <small className="text-muted">
+                      Si no ves el botón, abrí el menú ⋮ y elegí <em>Instalar app</em>.
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card iOS */}
+            <div className="col-12 col-lg-6">
+              <div className="card h-100 shadow-sm border-0">
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <span className="badge bg-dark">iOS</span>
+                    <h5 className="card-title fw-bold mb-0">Instalar en iPhone/iPad</h5>
+                  </div>
+                  <p className="card-text text-muted mb-3">
+                    En Safari, tocá <strong>Compartir</strong> y luego <strong>Agregar a inicio</strong>.
+                  </p>
+                  <ol className="text-muted ps-3 mb-0">
+                    <li>Abrí esta página en <strong>Safari</strong>.</li>
+                    <li>Tocá el ícono de <strong>Compartir</strong> (cuadrado con flecha hacia arriba).</li>
+                    <li>Elegí <strong>Agregar a inicio</strong> y confirmá.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner contextual solo para iOS cuando no está instalada */}
+          <IosInstallHint />
+        </div>
+      </section>
 
       {/* Características */}
       <section className="py-5 bg-light">
@@ -56,8 +110,7 @@ export default function HomePage() {
                 <div className="card-body text-center">
                   <h5 className="card-title fw-bold">Gestionar instituciones</h5>
                   <p className="card-text">
-                    Carga los colegios en los que trabajas y organiza tus cursos
-                    dentro de cada uno de ellos.
+                    Carga los colegios en los que trabajas y organiza tus cursos dentro de cada uno de ellos.
                   </p>
                 </div>
               </div>
@@ -68,8 +121,7 @@ export default function HomePage() {
                 <div className="card-body text-center">
                   <h5 className="card-title fw-bold">Cursos y divisiones</h5>
                   <p className="card-text">
-                    Registra fácilmente cursos y divisiones, manteniendo una
-                    estructura clara y organizada.
+                    Registra fácilmente cursos y divisiones, manteniendo una estructura clara y organizada.
                   </p>
                 </div>
               </div>
@@ -80,8 +132,7 @@ export default function HomePage() {
                 <div className="card-body text-center">
                   <h5 className="card-title fw-bold">Alumnos</h5>
                   <p className="card-text">
-                    Carga tus alumnos con nombre, apellido y DNI, y administra
-                    todos sus datos en un solo lugar.
+                    Carga tus alumnos con nombre, apellido y DNI, y administra todos sus datos en un solo lugar.
                   </p>
                 </div>
               </div>
@@ -92,8 +143,7 @@ export default function HomePage() {
                 <div className="card-body text-center">
                   <h5 className="card-title fw-bold">Asistencia</h5>
                   <p className="card-text">
-                    Lleva un registro diario de la asistencia de cada alumno,
-                    simple y rápido de usar.
+                    Lleva un registro diario de la asistencia de cada alumno, simple y rápido de usar.
                   </p>
                 </div>
               </div>
@@ -104,8 +154,7 @@ export default function HomePage() {
                 <div className="card-body text-center">
                   <h5 className="card-title fw-bold">Observaciones</h5>
                   <p className="card-text">
-                    Registra observaciones importantes sobre cada alumno para
-                    hacer un seguimiento más cercano.
+                    Registra observaciones importantes sobre cada alumno para hacer un seguimiento más cercano.
                   </p>
                 </div>
               </div>
@@ -116,8 +165,7 @@ export default function HomePage() {
                 <div className="card-body text-center">
                   <h5 className="card-title fw-bold">Notas y trimestres</h5>
                   <p className="card-text">
-                    Administra calificaciones de forma organizada, trimestre por
-                    trimestre.
+                    Administra calificaciones de forma organizada, trimestre por trimestre.
                   </p>
                 </div>
               </div>
@@ -130,9 +178,8 @@ export default function HomePage() {
       <section className="py-5 text-center">
         <div className="container">
           <h2 className="fw-semibold mb-3">Comienza a organizar tus clases</h2>
-          <p className="lead mb-4">
-            Con Docentes App podrás simplificar tu día a día y dedicar más
-            tiempo a enseñar.
+        <p className="lead mb-4">
+            Con Docentes App podrás simplificar tu día a día y dedicar más tiempo a enseñar.
           </p>
           <Link href="/login" className="btn btn-primary btn-lg px-4">
             Registrarme gratis

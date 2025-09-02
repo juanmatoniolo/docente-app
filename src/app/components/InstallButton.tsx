@@ -27,7 +27,7 @@ export default function InstallButton() {
 	if (!canInstall) return null;
 
 	return (
-		<button className="btn btn-primary btn-sm" onClick={onInstall}>
+		<button className="btn btn-primary" onClick={onInstall}>
 			Instalar app
 		</button>
 	);
