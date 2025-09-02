@@ -1,3 +1,4 @@
+// src/app/layout.jsx
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
 
@@ -18,8 +19,16 @@ export const metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
-	"background_color": "#0d6efd",
-	"theme_color": "#fff",
+  // Usa themeColor (no "theme_color")
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d6efd" },
+  ],
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  },
   openGraph: {
     title: "Docentes App",
     description: "Plataforma para gestión de colegios, cursos y asistencia",
@@ -48,7 +57,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es-AR">
-      <body suppressHydrationWarning className="bg-light text-dark">
+      <body suppressHydrationWarning className="bg-light text-dark d-flex flex-column min-vh-100">
         <main className="flex-grow-1 d-flex align-items-center justify-content-center">
           <section className="w-100">
             <BootstrapProvider>
@@ -57,13 +66,12 @@ export default function RootLayout({ children }) {
           </section>
         </main>
 
-        <footer className="bg-primary text-white mt-auto py-3" style={{ height: "5em" }}>
+        <footer className="bg-primary text-white mt-auto py-3" style={{ height: "6em" }}>
           <div className="container">
             <div className="row align-items-center">
               <div className="col-12 col-md-6 text-center text-md-start mb-3 mb-md-0">
                 <small className="fw-light">
-                  © {new Date().getFullYear()}{" "}
-                  <strong>Juanma Toniolo</strong>. Todos los derechos reservados.
+                  © {new Date().getFullYear()} <strong>Juanma Toniolo</strong>. Todos los derechos reservados.
                 </small>
               </div>
               <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end gap-4">

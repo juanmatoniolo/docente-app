@@ -1,18 +1,18 @@
+// next.config.mjs
 import withPWA from "next-pwa";
+import { default as runtimeCaching } from "next-pwa/cache.js"; // preset oficial
 
 const withPWAMiddleware = withPWA({
 	dest: "public",
 	register: true,
 	skipWaiting: true,
-	// para no cachear en desarrollo
 	disable: process.env.NODE_ENV === "development",
-	// Opcional: runtime caching básico (APIs, imágenes, fuentes, etc.)
-	// fallbacks: { document: '/offline.html' }, // si querés una página offline
+	runtimeCaching, // cachea estáticos, fonts, imágenes y requests comunes
+	// fallbacks: { document: "/offline.html" }, // si añadís /public/offline.html
 });
 
 const nextConfig = {
 	reactStrictMode: true,
-	// experimental: { appDir: true }, // en Next 13+ ya viene activo
 };
 
 export default withPWAMiddleware(nextConfig);
