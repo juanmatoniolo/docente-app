@@ -29,7 +29,7 @@ export const metadata = {
 
   // Colores para navegadores modernos
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fff" },
+    { media: "(prefers-color-scheme: light)", color: "#0d6efd" },
     { media: "(prefers-color-scheme: dark)", color: "#0d6efd" },
   ],
 
